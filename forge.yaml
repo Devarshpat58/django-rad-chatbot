@@ -1,0 +1,68 @@
+agents:
+- id: software-engineer
+  model: anthropic/claude-3.7-sonnet
+  system_prompt: '{{> system-prompt-engineer-act.hbs }}'
+  user_prompt: |-
+    {{#if (eq event.name 'act/user_task_update')}}
+    <feedback>{{event.value}}</feedback>
+    {{else}}
+    <task>{{event.value}}</task>
+    {{/if}}
+  ephemeral: false
+  tools:
+  - forge_tool_fs_read
+  - forge_tool_fs_create
+  - forge_tool_fs_remove
+  - forge_tool_fs_patch
+  - forge_tool_process_shell
+  - forge_tool_net_fetch
+  - forge_tool_fs_search
+  - forge_tool_fs_undo
+  - forge_tool_attempt_completion
+  subscribe:
+  - act/user_task_init
+  - act/user_task_update
+  max_walker_depth: 1
+  compact:
+    retention_window: 6
+    max_tokens: 2000
+    token_threshold: 80000
+    message_threshold: 200
+    prompt: '{{> system-prompt-context-summarizer.hbs }}'
+    model: anthropic/claude-3.7-sonnet
+- id: software-designer
+  model: anthropic/claude-3.7-sonnet
+  system_prompt: '{{> system-prompt-engineer-plan.hbs }}'
+  user_prompt: |-
+    {{#if (eq event.name 'plan/user_task_update')}}
+    <feedback>{{event.value}}</feedback>
+    {{else}}
+    <task>{{event.value}}</task>
+    {{/if}}
+    Only create new plans or update existing ones.
+    Do not modify, create, or delete any code files.
+  ephemeral: false
+  tools:
+  - forge_tool_fs_read
+  - forge_tool_net_fetch
+  - forge_tool_fs_search
+  - forge_tool_fs_create
+  - forge_tool_fs_patch
+  - forge_tool_attempt_completion
+  subscribe:
+  - plan/user_task_init
+  - plan/user_task_update
+  max_walker_depth: 1
+  compact:
+    retention_window: 6
+    max_tokens: 2000
+    token_threshold: 120000
+    message_threshold: 200
+    prompt: '{{> system-prompt-context-summarizer.hbs }}'
+    model: anthropic/claude-3.7-sonnet
+variables:
+  mode: ACT
+updates:
+  frequency: daily
+  auto_update: true
+model: anthropic/claude-sonnet-4

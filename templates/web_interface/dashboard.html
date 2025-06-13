@@ -1,0 +1,342 @@
+{% extends 'base.html' %}
+
+{% block title %}Dashboard - Django RAG API{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <h1><i class="fas fa-tachometer-alt"></i> Dashboard</h1>
+        <p class="lead">Monitor system performance and usage statistics.</p>
+    </div>
+</div>
+
+<!-- Statistics Cards -->
+<div class="row mb-4">
+    <div class="col-lg-3 col-md-6 mb-3">
+        <div class="card text-center h-100">
+            <div class="card-body">
+                <div class="text-primary mb-2">
+                    <i class="fas fa-search fa-2x"></i>
+                </div>
+                <h3 class="card-title">{{ total_searches|default:0 }}</h3>
+                <p class="card-text">Total Searches</p>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-3 col-md-6 mb-3">
+        <div class="card text-center h-100">
+            <div class="card-body">
+                <div class="text-success mb-2">
+                    <i class="fas fa-users fa-2x"></i>
+                </div>
+                <h3 class="card-title">{{ total_sessions|default:0 }}</h3>
+                <p class="card-text">Total Sessions</p>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-3 col-md-6 mb-3">
+        <div class="card text-center h-100">
+            <div class="card-body">
+                <div class="text-info mb-2">
+                    <i class="fas fa-user-check fa-2x"></i>
+                </div>
+                <h3 class="card-title">{{ active_sessions|default:0 }}</h3>
+                <p class="card-text">Active Sessions</p>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-3 col-md-6 mb-3">
+        <div class="card text-center h-100">
+            <div class="card-body">
+                <div class="text-warning mb-2">
+                    <i class="fas fa-clock fa-2x"></i>
+                </div>
+                <h3 class="card-title">{{ recent_searches_count|default:0 }}</h3>
+                <p class="card-text">Last 24h</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <!-- System Status -->
+    <div class="col-lg-6 mb-4">
+        <div class="card h-100">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-server"></i> System Status</h5>
+            </div>
+            <div class="card-body">
+                {% if system_status %}
+                    <div class="row mb-3">
+                        <div class="col-4"><strong>Overall Status:</strong></div>
+                        <div class="col-8">
+                            <span class="badge bg-{% if system_status.status == 'ready' %}success{% else %}danger{% endif %} fs-6">
+                                {{ system_status.status|title }}
+                            </span>
+                        </div>
+                    </div>
+                    
+                    <div class="row mb-3">
+                        <div class="col-4"><strong>Database:</strong></div>
+                        <div class="col-8">
+                            <span class="badge bg-{% if system_status.database_connected %}success{% else %}danger{% endif %}">
+                                {% if system_status.database_connected %}Connected{% else %}Disconnected{% endif %}
+                            </span>
+                        </div>
+                    </div>
+                    
+                    <div class="row mb-3">
+                        <div class="col-4"><strong>RAG System:</strong></div>
+                        <div class="col-8">
+                            <span class="badge bg-{% if system_status.rag_system_loaded %}success{% else %}danger{% endif %}">
+                                {% if system_status.rag_system_loaded %}Loaded{% else %}Not Loaded{% endif %}
+                            </span>
+                        </div>
+                    </div>
+                    
+                    {% if system_status.performance_metrics %}
+                    <div class="row mb-3">
+                        <div class="col-4"><strong>Uptime:</strong></div>
+                        <div class="col-8">
+                            {% if system_status.performance_metrics.uptime %}
+                                {{ system_status.performance_metrics.uptime|floatformat:0 }}s
+                            {% else %}
+                                N/A
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% endif %}
+                    
+                    <div class="row">
+                        <div class="col-4"><strong>Last Updated:</strong></div>
+                        <div class="col-8 small text-muted">
+                            {{ system_status.last_updated|default:"Unknown" }}
+                        </div>
+                    </div>
+                {% else %}
+                    <div class="alert alert-warning" role="alert">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        System status unavailable
+                        {% if error %}<br><small>{{ error }}</small>{% endif %}
+                    </div>
+                {% endif %}
+                
+                <div class="mt-3">
+                    <button class="btn btn-sm btn-primary" onclick="refreshStatus()">
+                        <i class="fas fa-refresh"></i> Refresh
+                    </button>
+                    <a href="/api/v1/health/" class="btn btn-sm btn-outline-secondary" target="_blank">
+                        <i class="fas fa-heartbeat"></i> Health Check
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Recent Activity -->
+    <div class="col-lg-6 mb-4">
+        <div class="card h-100">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-history"></i> Recent Activity</h5>
+            </div>
+            <div class="card-body">
+                {% if recent_searches %}
+                    <div class="activity-list" style="max-height: 300px; overflow-y: auto;">
+                        {% for search in recent_searches %}
+                        <div class="activity-item mb-3 pb-2 border-bottom">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <div class="activity-content flex-grow-1">
+                                    <div class="activity-query text-truncate" style="max-width: 250px;">
+                                        <strong>{{ search.query_text|truncatechars:50 }}</strong>
+                                    </div>
+                                    <div class="activity-meta small text-muted">
+                                        {{ search.created_at|timesince }} ago
+                                        {% if search.execution_time %}
+                                            | {{ search.execution_time|floatformat:2 }}s
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                <div class="activity-status">
+                                    <span class="badge bg-{% if search.response %}success{% else %}warning{% endif %} small">
+                                        {% if search.response %}Success{% else %}Pending{% endif %}
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <div class="text-center text-muted py-4">
+                        <i class="fas fa-inbox fa-2x mb-2"></i>
+                        <p>No recent activity</p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- API Endpoints -->
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-api"></i> API Endpoints</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-lg-6">
+                        <h6>Core Endpoints</h6>
+                        <div class="list-group list-group-flush">
+                            <a href="/api/v1/" class="list-group-item list-group-item-action" target="_blank">
+                                <div class="d-flex w-100 justify-content-between">
+                                    <h6 class="mb-1">API Root</h6>
+                                    <small class="text-muted">GET</small>
+                                </div>
+                                <p class="mb-1">/api/v1/</p>
+                            </a>
+                            
+                            <a href="/api/v1/search/" class="list-group-item list-group-item-action">
+                                <div class="d-flex w-100 justify-content-between">
+                                    <h6 class="mb-1">Search</h6>
+                                    <small class="text-muted">POST</small>
+                                </div>
+                                <p class="mb-1">/api/v1/search/</p>
+                            </a>
+                            
+                            <a href="/api/v1/chat/" class="list-group-item list-group-item-action">
+                                <div class="d-flex w-100 justify-content-between">
+                                    <h6 class="mb-1">Chat</h6>
+                                    <small class="text-muted">POST</small>
+                                </div>
+                                <p class="mb-1">/api/v1/chat/</p>
+                            </a>
+                            
+                            <a href="/api/v1/status/" class="list-group-item list-group-item-action" target="_blank">
+                                <div class="d-flex w-100 justify-content-between">
+                                    <h6 class="mb-1">System Status</h6>
+                                    <small class="text-muted">GET</small>
+                                </div>
+                                <p class="mb-1">/api/v1/status/</p>
+                            </a>
+                        </div>
+                    </div>
+                    
+                    <div class="col-lg-6">
+                        <h6>Documentation</h6>
+                        <div class="list-group list-group-flush">
+                            <a href="/api/docs/" class="list-group-item list-group-item-action" target="_blank">
+                                <div class="d-flex w-100 justify-content-between">
+                                    <h6 class="mb-1">Swagger UI</h6>
+                                    <small class="text-muted">Interactive</small>
+                                </div>
+                                <p class="mb-1">/api/docs/</p>
+                            </a>
+                            
+                            <a href="/api/redoc/" class="list-group-item list-group-item-action" target="_blank">
+                                <div class="d-flex w-100 justify-content-between">
+                                    <h6 class="mb-1">ReDoc</h6>
+                                    <small class="text-muted">Documentation</small>
+                                </div>
+                                <p class="mb-1">/api/redoc/</p>
+                            </a>
+                            
+                            <a href="/api/schema/" class="list-group-item list-group-item-action" target="_blank">
+                                <div class="d-flex w-100 justify-content-between">
+                                    <h6 class="mb-1">OpenAPI Schema</h6>
+                                    <small class="text-muted">JSON</small>
+                                </div>
+                                <p class="mb-1">/api/schema/</p>
+                            </a>
+                            
+                            <a href="/api/v1/stats/" class="list-group-item list-group-item-action" target="_blank">
+                                <div class="d-flex w-100 justify-content-between">
+                                    <h6 class="mb-1">API Statistics</h6>
+                                    <small class="text-muted">GET</small>
+                                </div>
+                                <p class="mb-1">/api/v1/stats/</p>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    function refreshStatus() {
+        // Show loading state
+        const refreshBtn = document.querySelector('button[onclick="refreshStatus()"]');
+        const originalHtml = refreshBtn.innerHTML;
+        refreshBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Refreshing...';
+        refreshBtn.disabled = true;
+        
+        // Fetch fresh status
+        fetch('/ajax/status/')
+            .then(response => response.json())
+            .then(data => {
+                // Here you would update the status display with fresh data
+                // For now, we'll just reload the page to get fresh data
+                window.location.reload();
+            })
+            .catch(error => {
+                console.error('Status refresh error:', error);
+                alert('Failed to refresh status: ' + error.message);
+            })
+            .finally(() => {
+                refreshBtn.innerHTML = originalHtml;
+                refreshBtn.disabled = false;
+            });
+    }
+    
+    // Auto-refresh every 60 seconds
+    let autoRefreshInterval;
+    
+    function startAutoRefresh() {
+        autoRefreshInterval = setInterval(() => {
+            fetch('/ajax/status/')
+                .then(response => response.json())
+                .then(data => {
+                    // Update status indicators without full page reload
+                    updateStatusIndicators(data);
+                })
+                .catch(error => {
+                    console.error('Auto-refresh error:', error);
+                });
+        }, 60000); // 60 seconds
+    }
+    
+    function updateStatusIndicators(data) {
+        // Update the navbar status indicator
+        const navStatus = document.getElementById('system-status');
+        if (navStatus) {
+            if (data.status === 'ready') {
+                navStatus.innerHTML = '<i class="fas fa-circle system-ready"></i> Ready';
+            } else {
+                navStatus.innerHTML = '<i class="fas fa-circle system-error"></i> Error';
+            }
+        }
+        
+        // Could update dashboard status here too without full reload
+        // This would require more complex DOM manipulation
+    }
+    
+    // Start auto-refresh when page loads
+    document.addEventListener('DOMContentLoaded', function() {
+        startAutoRefresh();
+    });
+    
+    // Clean up interval when page unloads
+    window.addEventListener('beforeunload', function() {
+        if (autoRefreshInterval) {
+            clearInterval(autoRefreshInterval);
+        }
+    });
+</script>
+{% endblock %}

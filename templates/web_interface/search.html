@@ -1,0 +1,553 @@
+{% extends 'base.html' %}
+
+{% block title %}Search - Django RAG API{% endblock %}
+
+{% block content %}
+<style>
+    .search-container {
+        max-width: 900px;
+        margin: 0 auto;
+    }
+    
+    .search-header {
+        text-align: center;
+        margin-bottom: 3rem;
+    }
+    
+    .search-title {
+        font-size: 2.5rem;
+        font-weight: 600;
+        background: var(--gradient);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        margin-bottom: 0.5rem;
+    }
+    
+    .search-form {
+        margin-bottom: 2rem;
+        position: relative;
+    }
+    
+    .search-input-container {
+        position: relative;
+        max-width: 700px;
+        margin: 0 auto;
+    }
+    
+    .search-input {
+        width: 100%;
+        padding: 1.5rem 5rem 1.5rem 2rem;
+        border-radius: 50px;
+        border: 2px solid var(--border);
+        background: var(--surface);
+        color: var(--text);
+        font-size: 1.1rem;
+        transition: all 0.3s ease;
+        box-shadow: var(--shadow);
+    }
+    
+    .search-input:focus {
+        border-color: var(--primary);
+        box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1), var(--shadow-lg);
+        transform: translateY(-2px);
+    }
+    
+    .search-btn {
+        position: absolute;
+        right: 8px;
+        top: 50%;
+        transform: translateY(-50%);
+        background: var(--gradient);
+        border: none;
+        width: 52px;
+        height: 52px;
+        border-radius: 50%;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    
+    .search-btn:hover {
+        transform: translateY(-50%) scale(1.1);
+        box-shadow: 0 5px 20px rgba(99, 102, 241, 0.4);
+    }
+    
+    .search-btn:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+    }
+    
+    .search-suggestions {
+        display: flex;
+        gap: 0.5rem;
+        flex-wrap: wrap;
+        justify-content: center;
+        margin-top: 1rem;
+    }
+    
+    .suggestion-tag {
+        background: var(--surface-light);
+        border: 1px solid var(--border);
+        border-radius: 20px;
+        padding: 0.5rem 1rem;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        font-size: 0.9rem;
+        color: var(--text-muted);
+    }
+    
+    .suggestion-tag:hover {
+        background: var(--primary);
+        color: white;
+        transform: translateY(-2px);
+    }
+    
+    .results-container {
+        margin-top: 3rem;
+    }
+    
+    .result-card {
+        background: var(--surface);
+        border-radius: 16px;
+        border: 1px solid var(--border);
+        margin-bottom: 1.5rem;
+        overflow: hidden;
+        transition: all 0.3s ease;
+        opacity: 0;
+        transform: translateY(20px);
+        animation: slideUp 0.6s ease forwards;
+    }
+    
+    .result-card:hover {
+        transform: translateY(-5px);
+        box-shadow: var(--shadow-lg);
+        border-color: var(--primary);
+    }
+    
+    .result-header {
+        padding: 1.5rem;
+        background: linear-gradient(135deg, var(--surface-light) 0%, var(--surface) 100%);
+        border-bottom: 1px solid var(--border);
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+    }
+    
+    .result-icon {
+        width: 40px;
+        height: 40px;
+        background: var(--gradient);
+        border-radius: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+    }
+    
+    .result-content {
+        padding: 2rem;
+        line-height: 1.7;
+    }
+    
+    .result-meta {
+        padding: 1rem 2rem;
+        background: var(--surface-light);
+        border-top: 1px solid var(--border);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 1rem;
+    }
+    
+    .meta-badge {
+        background: var(--primary);
+        color: white;
+        padding: 0.3rem 0.8rem;
+        border-radius: 12px;
+        font-size: 0.8rem;
+        font-weight: 500;
+    }
+    
+    .loading-container {
+        text-align: center;
+        padding: 4rem 2rem;
+        opacity: 0;
+        transform: translateY(20px);
+        animation: slideUp 0.6s ease forwards;
+    }
+    
+    .loading-pulse {
+        width: 60px;
+        height: 60px;
+        background: var(--gradient);
+        border-radius: 50%;
+        margin: 0 auto 1.5rem;
+        animation: pulse 1.5s ease-in-out infinite;
+    }
+    
+    .search-filters {
+        display: flex;
+        gap: 1rem;
+        justify-content: center;
+        margin: 2rem 0;
+        flex-wrap: wrap;
+    }
+    
+    .filter-btn {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 25px;
+        padding: 0.75rem 1.5rem;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        color: var(--text-muted);
+        font-weight: 500;
+    }
+    
+    .filter-btn:hover,
+    .filter-btn.active {
+        background: var(--primary);
+        color: white;
+        border-color: var(--primary);
+        transform: translateY(-2px);
+    }
+    
+    .empty-state {
+        text-align: center;
+        padding: 4rem 2rem;
+        color: var(--text-muted);
+    }
+    
+    .empty-icon {
+        width: 80px;
+        height: 80px;
+        background: var(--surface-light);
+        border-radius: 50%;
+        margin: 0 auto 1.5rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        opacity: 0.5;
+    }
+    
+    @keyframes slideUp {
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+    
+    @media (max-width: 768px) {
+        .search-input {
+            padding: 1.2rem 4rem 1.2rem 1.5rem;
+            font-size: 1rem;
+        }
+        
+        .search-btn {
+            width: 44px;
+            height: 44px;
+        }
+        
+        .search-title {
+            font-size: 2rem;
+        }
+        
+        .result-content {
+            padding: 1.5rem;
+        }
+        
+        .result-meta {
+            padding: 1rem 1.5rem;
+        }
+    }
+</style>
+
+<div class="search-container">
+    <div class="search-header">
+        <h1 class="search-title">Advanced Property Search</h1>
+        <p class="text-muted">Ask questions in natural language and get intelligent responses</p>
+    </div>
+    
+    <form id="search-form" class="search-form">
+        <div class="search-input-container">
+            <input 
+                type="text" 
+                id="search-input" 
+                class="search-input form-control" 
+                placeholder="What kind of property are you looking for?"
+                autocomplete="off"
+            >
+            <button type="submit" class="search-btn" id="search-btn">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="11" cy="11" r="8"></circle>
+                    <path d="m21 21-4.35-4.35"></path>
+                </svg>
+            </button>
+        </div>
+        
+        <div class="search-suggestions">
+            <span class="suggestion-tag" onclick="fillSearch('Find 2 bedroom apartments under $2000')">2BR under $2000</span>
+            <span class="suggestion-tag" onclick="fillSearch('Luxury condos with ocean view')">Luxury condos</span>
+            <span class="suggestion-tag" onclick="fillSearch('Pet-friendly apartments downtown')">Pet-friendly</span>
+            <span class="suggestion-tag" onclick="fillSearch('Properties with swimming pool')">With pool</span>
+            <span class="suggestion-tag" onclick="fillSearch('Studio apartments for students')">Student housing</span>
+        </div>
+    </form>
+    
+    <div class="search-filters" id="search-filters" style="display: none;">
+        <button type="button" class="filter-btn active" data-filter="all">All Results</button>
+        <button type="button" class="filter-btn" data-filter="apartment">Apartments</button>
+        <button type="button" class="filter-btn" data-filter="house">Houses</button>
+        <button type="button" class="filter-btn" data-filter="condo">Condos</button>
+    </div>
+    
+    <div id="loading-container" class="loading-container" style="display: none;">
+        <div class="loading-pulse"></div>
+        <h4>Searching Properties...</h4>
+        <p class="text-muted">Processing your query with AI</p>
+    </div>
+    
+    <div id="results-container" class="results-container"></div>
+    
+    <div id="empty-state" class="empty-state" style="display: none;">
+        <div class="empty-icon">
+            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="11" cy="11" r="8"></circle>
+                <path d="m21 21-4.35-4.35"></path>
+            </svg>
+        </div>
+        <h4>No results found</h4>
+        <p>Try adjusting your search query or use different keywords</p>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    let currentQuery = '';
+    let searchResults = [];
+    
+    document.addEventListener('DOMContentLoaded', () => {
+        // Focus on search input
+        document.getElementById('search-input').focus();
+        
+        // Setup form submission
+        document.getElementById('search-form').addEventListener('submit', handleSearch);
+        
+        // Setup filter buttons
+        document.querySelectorAll('.filter-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                filterResults(btn.dataset.filter);
+            });
+        });
+        
+        // Add typing effect
+        const searchInput = document.getElementById('search-input');
+        const examples = [
+            "Find 2 bedroom apartments under $2000",
+            "Luxury condos with ocean view in Miami",
+            "Pet-friendly apartments near downtown",
+            "Properties with swimming pool and gym",
+            "Studio apartments for students under $1500"
+        ];
+        
+        let exampleIndex = 0;
+        let isTyping = false;
+        
+        function startTypingDemo() {
+            if (searchInput.value === '' && !isTyping) {
+                isTyping = true;
+                const example = examples[exampleIndex];
+                let i = 0;
+                
+                const typeInterval = setInterval(() => {
+                    searchInput.placeholder = example.substring(0, i + 1);
+                    i++;
+                    
+                    if (i > example.length) {
+                        clearInterval(typeInterval);
+                        setTimeout(() => {
+                            exampleIndex = (exampleIndex + 1) % examples.length;
+                            isTyping = false;
+                            setTimeout(startTypingDemo, 1000);
+                        }, 3000);
+                    }
+                }, 80);
+            }
+        }
+        
+        setTimeout(startTypingDemo, 2000);
+    });
+    
+    function fillSearch(query) {
+        document.getElementById('search-input').value = query;
+        document.getElementById('search-input').focus();
+    }
+    
+    function handleSearch(e) {
+        e.preventDefault();
+        
+        const query = document.getElementById('search-input').value.trim();
+        if (!query) {
+            alert('Please enter a search query');
+            return;
+        }
+        
+        currentQuery = query;
+        performSearch(query);
+    }
+    
+    function performSearch(query) {
+        // Show loading state
+        showLoading();
+        hideElements(['results-container', 'empty-state', 'search-filters']);
+        
+        // Disable search button
+        const searchBtn = document.getElementById('search-btn');
+        searchBtn.disabled = true;
+        
+        // Perform search
+        fetch('/ajax/search/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': window.csrfToken
+            },
+            body: JSON.stringify({ query: query })
+        })
+        .then(response => response.json())
+        .then(data => {
+            hideLoading();
+            searchBtn.disabled = false;
+            
+            if (data.success) {
+                searchResults = [data]; // Store result for filtering
+                displayResults(searchResults);
+                document.getElementById('search-filters').style.display = 'flex';
+            } else {
+                showEmptyState();
+                console.error('Search error:', data.error);
+            }
+        })
+        .catch(error => {
+            hideLoading();
+            searchBtn.disabled = false;
+            showEmptyState();
+            console.error('Search failed:', error);
+            alert('Search failed: ' + error.message);
+        });
+    }
+    
+    function displayResults(results) {
+        const container = document.getElementById('results-container');
+        container.innerHTML = '';
+        
+        if (results.length === 0) {
+            showEmptyState();
+            return;
+        }
+        
+        results.forEach((result, index) => {
+            const resultCard = createResultCard(result, index);
+            container.appendChild(resultCard);
+        });
+        
+        container.style.display = 'block';
+        
+        // Animate cards
+        setTimeout(() => {
+            container.querySelectorAll('.result-card').forEach((card, index) => {
+                setTimeout(() => {
+                    card.style.animationDelay = (index * 0.1) + 's';
+                }, index * 100);
+            });
+        }, 100);
+    }
+    
+    function createResultCard(result, index) {
+        const card = document.createElement('div');
+        card.className = 'result-card';
+        
+        const executionTime = result.metadata?.execution_time || 0;
+        const queryId = result.query_id || 'N/A';
+        const timestamp = result.timestamp ? new Date(result.timestamp).toLocaleString() : 'Just now';
+        
+        card.innerHTML = `
+            <div class="result-header">
+                <div class="result-icon">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
+                        <circle cx="12" cy="10" r="3"></circle>
+                    </svg>
+                </div>
+                <div>
+                    <h5 class="mb-0">Search Result #${index + 1}</h5>
+                    <small class="text-muted">Query: "${currentQuery}"</small>
+                </div>
+            </div>
+            <div class="result-content">
+                ${result.response || 'No response available'}
+            </div>
+            <div class="result-meta">
+                <div>
+                    <span class="meta-badge">Time: ${executionTime.toFixed(2)}s</span>
+                    <span class="meta-badge">ID: ${queryId}</span>
+                </div>
+                <small class="text-muted">${timestamp}</small>
+            </div>
+        `;
+        
+        return card;
+    }
+    
+    function filterResults(filter) {
+        if (filter === 'all') {
+            displayResults(searchResults);
+        } else {
+            // Simple filter implementation
+            const filtered = searchResults.filter(result => {
+                const response = (result.response || '').toLowerCase();
+                return response.includes(filter);
+            });
+            displayResults(filtered);
+        }
+    }
+    
+    function showLoading() {
+        document.getElementById('loading-container').style.display = 'block';
+    }
+    
+    function hideLoading() {
+        document.getElementById('loading-container').style.display = 'none';
+    }
+    
+    function showEmptyState() {
+        document.getElementById('empty-state').style.display = 'block';
+    }
+    
+    function hideElements(ids) {
+        ids.forEach(id => {
+            document.getElementById(id).style.display = 'none';
+        });
+    }
+    
+    // Enter key support
+    document.getElementById('search-input').addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            handleSearch(e);
+        }
+    });
+    
+    // Auto-focus and clear placeholder on input
+    document.getElementById('search-input').addEventListener('focus', function() {
+        this.placeholder = 'What kind of property are you looking for?';
+    });
+</script>
+{% endblock %}

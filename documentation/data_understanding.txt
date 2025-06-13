@@ -1,0 +1,72 @@
+# Airbnb Listing Data Field Explanations
+
+## Basic Listing Info
+_id: Unique identifier for the listing (MongoDB primary key)
+listing_url: Direct URL to view the Airbnb listing
+name: Title/name of the Airbnb listing
+summary: Brief description of the listing 
+space: Details about the physical space 
+description: Full description of the listing
+neighborhood_overview: Information about the surrounding area 
+notes: Additional notes from host 
+transit: Public transportation information 
+access: Access instructions for guests 
+interaction: Host-guest interaction details 
+house_rules: Specific rules for the property 
+
+## Listing Characteristics
+property_type: Type of property (e.g., Apartment, House)
+room_type: Type of room (Private/Shared/Entire home)
+bed_type: Type of bed provided
+minimum_nights: Minimum stay requirement
+maximum_nights: Maximum stay allowed
+cancellation_policy: Policy type (flexible/moderate/strict)
+last_scraped: When data was last collected from Airbnb
+calendar_last_scraped: When availability calendar was last updated
+first_review: Date of first review received
+last_review: Date of most recent review
+
+## Capacity Info
+accommodates: Number of guests the space can hold
+bedrooms: Number of bedrooms
+beds: Number of beds
+bathrooms: Number of bathrooms (1.5 = 1 full + 1 half bath)
+number_of_reviews: Total count of reviews
+
+## Amenities
+amenities: Array of available amenities (Wifi, Kitchen, etc.)
+
+## Pricing
+price: Base nightly price
+extra_people: Additional cost per extra guest
+guests_included: Number of guests included in base price
+
+## Images
+images: Contains URLs for listing photos (thumbnail/medium/full size)
+
+## Host Info
+host: Object containing host details (name, location, verification status)
+host_id: Unique identifier for the host
+host_url: Host's Airbnb profile URL
+host_name: Host's display name
+host_location: Where the host is based
+host_about: Host's self-description 
+host_thumbnail_url: Small profile picture URL
+host_picture_url: Full-size profile picture URL
+host_neighbourhood: Host's local neighborhood
+host_is_superhost: Superhost status flag
+host_has_profile_pic: Whether host has a profile picture
+host_identity_verified: ID verification status
+host_listings_count: How many listings host manages
+host_verifications: Array of verification methods used
+
+## Location Data
+address: Physical address components (street, city, country)
+location: Geolocation coordinates 
+
+## Availability
+availability: Calendar availability (days available in next 30/60/90/365)
+
+## Reviews
+review_scores: Aggregate review scores across categories
+reviews: Array containing individual review objects

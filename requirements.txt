@@ -1,0 +1,39 @@
+# Django and REST Framework
+Django>=4.2.0
+djangorestframework>=3.14.0
+django-cors-headers>=4.0.0
+django-extensions>=3.2.0
+
+# Existing dependencies from the RAG system
+sentence-transformers>=2.2.0
+numpy>=1.21.0
+faiss-cpu>=1.7.0
+pymongo>=4.0.0
+spacy>=3.4.0
+fuzzywuzzy>=0.18.0
+python-levenshtein>=0.20.0
+torch>=1.12.0
+scikit-learn>=1.1.0
+
+# Web and API enhancements
+django-rest-swagger>=2.2.0
+drf-spectacular>=0.26.0
+django-filter>=23.0
+
+# Frontend and static assets
+whitenoise>=6.0.0
+
+# Development tools
+django-debug-toolbar>=4.0.0
+pytest-django>=4.5.0
+
+# Additional Django packages for production
+psycopg2-binary>=2.9.0
+gunicorn>=20.0.0
+
+# Existing system dependencies
+gradio>=3.0.0
+
+# Configuration and utilities
+python-dotenv>=0.19.0
+Pillow>=9.0.0
