@@ -592,7 +592,7 @@ class QueryUnderstandingEngine:
                 
                 # Combine with current query
                 if important_context:
-                    context_terms = list(set(important_context))[:3]  # Limit context
+                    context_terms = list(set(important_context))  # Include all context terms
                     # Ensure all context terms are strings
                     context_terms = [str(term) for term in context_terms if term is not None]
                     return f"{query} {' '.join(context_terms)}"
@@ -622,7 +622,7 @@ class QueryUnderstandingEngine:
                 # Expansion candidates from domain vocabulary
                 candidates = list(AIRBNB_CONFIG['synonyms'].keys())
                 if len(candidates) > 50:
-                    candidates = candidates[:50]  # Limit for performance
+                    candidates = candidates  # Include all candidates
                 
                 candidate_embeddings = self.sentence_model.encode(candidates)
                 
@@ -633,7 +633,7 @@ class QueryUnderstandingEngine:
                     )
                     
                     # Add top similar terms
-                    top_indices = np.argsort(similarities)[-2:]  # Top 2 similar
+                    top_indices = np.argsort(similarities)[-10:]  # Top 10 similar terms
                     for idx in top_indices:
                         if similarities[idx] > 0.6:  # High similarity threshold
                             expanded.append(candidates[idx])
@@ -650,7 +650,7 @@ class QueryUnderstandingEngine:
         # Add predefined synonyms
         for keyword in keywords:
             if keyword in AIRBNB_CONFIG['synonyms']:
-                expanded.extend(AIRBNB_CONFIG['synonyms'][keyword][:2])
+                expanded.extend(AIRBNB_CONFIG['synonyms'][keyword])  # Include ALL synonyms
         
         return list(set(expanded))
     
@@ -805,8 +805,8 @@ class QueryUnderstandingEngine:
         
         if enhanced_terms:
             # Ensure all enhanced terms are strings
-            enhanced_terms = [str(term) for term in enhanced_terms[:3] if term is not None]
-            return f"{query} {' '.join(enhanced_terms)}"  # Limit to avoid noise
+            enhanced_terms = [str(term) for term in enhanced_terms if term is not None]  # Include ALL context terms
+            return f"{query} {' '.join(enhanced_terms)}"  # Include all enhanced terms
         
         return query
     
@@ -816,7 +816,7 @@ class QueryUnderstandingEngine:
         
         for keyword in keywords:
             if keyword in AIRBNB_CONFIG['synonyms']:
-                expanded.extend(AIRBNB_CONFIG['synonyms'][keyword][:2])  # Limit expansion
+                expanded.extend(AIRBNB_CONFIG['synonyms'][keyword])  # Include ALL synonyms
         
         return list(set(expanded))
     
@@ -908,7 +908,7 @@ class NumericSearchEngine:
                 
                 if field_name in patterns:
                     # Add dynamic patterns based on vocabulary
-                    for indicator in indicators[:3]:  # Limit to avoid pattern explosion
+                    for indicator in indicators:  # Include all indicators
                         clean_indicator = indicator.lower().strip()
                         if len(clean_indicator) > 2:
                             # Add as exact match pattern
@@ -1026,7 +1026,7 @@ class NumericSearchEngine:
                     if (hasattr(self.vocabulary_manager, 'numeric_patterns') and
                         isinstance(self.vocabulary_manager.numeric_patterns, dict)):
                         for pattern_type, indicators in self.vocabulary_manager.numeric_patterns.items():
-                            if any(indicator.lower() in context_term.lower() for indicator in indicators[:5]):
+                            if any(indicator.lower() in context_term.lower() for indicator in indicators):
                                 field_name = pattern_type.replace('_indicators', '')
                                 if field_name == 'guest':
                                     field_name = 'accommodates'
@@ -1223,7 +1223,7 @@ class SemanticSearchEngine:
         """Enhanced semantic search with query optimization and multi-stage retrieval"""
         logger.info("Starting semantic search", 
                    module="SemanticSearchEngine", 
-                   query=query[:50], 
+                   query=query, 
                    k=k)
         if not self.index_manager.faiss_index:
             logger.warning("FAISS index not available")
@@ -1252,7 +1252,7 @@ class SemanticSearchEngine:
         
         logger.info("Semantic search completed", 
                    module="SemanticSearchEngine", 
-                   query=query[:50], 
+                   query=query, 
                    results_count=len(fused_results[:k]))
         return fused_results[:k]
     
@@ -1270,7 +1270,7 @@ class SemanticSearchEngine:
                 # Add synonyms for better semantic matching
                 synonyms = self.vocabulary_manager.get_synonyms(word)
                 if synonyms:
-                    enhanced_words.extend(synonyms[:2])  # Add top 2 synonyms
+                    enhanced_words.extend(synonyms)  # Add ALL synonyms
             
             enhanced_query = ' '.join(enhanced_words)
         
@@ -1322,7 +1322,7 @@ class SemanticSearchEngine:
         # Remove common stop words and extract meaningful terms
         stop_words = {'a', 'an', 'and', 'are', 'as', 'at', 'be', 'by', 'for', 'from', 'is', 'in', 'of', 'on', 'that', 'the', 'to', 'will', 'with'}
         words = [word.lower().strip('.,!?') for word in query.split() if word.lower() not in stop_words and len(word) > 2]
-        return ' '.join(words[:5])  # Return top 5 key words
+        return ' '.join(words)  # Return ALL key words
     
     def _perform_faiss_search(self, embedding: Any, k: int) -> List[Tuple[Dict[str, Any], float]]:
         """Perform FAISS search with error handling"""
@@ -1869,7 +1869,7 @@ class AIJSONSummarizer:
                         error=str(e),
                         exc_info=True)
     
-    def generate_intelligent_summary(self, json_doc: Dict[str, Any], query: str = "", max_length: int = 400) -> str:
+    def generate_intelligent_summary(self, json_doc: Dict[str, Any], query: str = "", max_length: int = 10000) -> str:
         """Generate an intelligent summary of JSON document using AI understanding"""
         try:
             # Extract key information from the JSON document
@@ -1922,7 +1922,7 @@ class AIJSONSummarizer:
             if field in json_doc and json_doc[field]:
                 text = str(json_doc[field]).strip()
                 if len(text) > 50:  # Only meaningful descriptions
-                    key_info['description'][field] = text[:800]  # Allow longer descriptions for better summaries
+                    key_info['description'][field] = text  # Show FULL descriptions without truncation
         
         # Specifications
         spec_fields = ['accommodates', 'bedrooms', 'bathrooms', 'beds']
@@ -1951,10 +1951,10 @@ class AIJSONSummarizer:
         # Amenities
         if 'amenities' in json_doc and json_doc['amenities']:
             if isinstance(json_doc['amenities'], list):
-                key_info['amenities'] = [str(a) for a in json_doc['amenities'][:10]]  # Top 10 amenities
+                key_info['amenities'] = [str(a) for a in json_doc['amenities']]  # Show ALL amenities
             else:
                 amenities_str = str(json_doc['amenities'])
-                key_info['amenities'] = [a.strip() for a in amenities_str.split(',')[:10]]
+                key_info['amenities'] = [a.strip() for a in amenities_str.split(',')]  # Show ALL amenities
         
         # Host information
         host_fields = ['host_name', 'host_is_superhost', 'host_response_rate']
@@ -2043,7 +2043,7 @@ class AIJSONSummarizer:
                         summary_parts.append(f"Location: {', '.join(location_info)}")
                 
                 elif category == 'amenities' and key_info['amenities']:
-                    top_amenities = key_info['amenities'][:5]  # Top 5 amenities
+                    top_amenities = key_info['amenities']  # Show ALL amenities
                     summary_parts.append(f"Amenities: {', '.join(top_amenities)}")
                 
                 elif category == 'ratings' and key_info['ratings']:
@@ -2068,16 +2068,17 @@ class AIJSONSummarizer:
             if desc_text:
                 # Allow longer descriptions with increased buffer
                 current_length = len(' | '.join(summary_parts))
-                remaining_length = max_length - current_length - 50  # Larger buffer for longer summaries
-                if remaining_length > 100:
-                    truncated_desc = desc_text[:remaining_length] + "..." if len(desc_text) > remaining_length else desc_text
-                    summary_parts.append(f"Description: {truncated_desc}")
+                remaining_length = max_length - current_length  # Show all remaining content
+                # Show FULL description without length checks
+                summary_parts.append(f"Description: {desc_text}")
+
         
         summary = ' | '.join(summary_parts)
         
         # Truncate if necessary
         if len(summary) > max_length:
-            summary = summary[:max_length-3] + "..."
+            # Removed truncation - show FULL summary
+            pass  # Keep full summary without truncation
         
         return summary
     
@@ -2124,14 +2125,15 @@ class AIJSONSummarizer:
         
         # Top amenities
         if key_info['amenities']:
-            top_amenities = key_info['amenities'][:3]  # Top 3 for general summary
+            top_amenities = key_info['amenities']  # Show ALL amenities
             summary_parts.append(f"Amenities: {', '.join(top_amenities)}")
         
         summary = ' | '.join(summary_parts)
         
         # Truncate if necessary
         if len(summary) > max_length:
-            summary = summary[:max_length-3] + "..."
+            # Removed truncation - show FULL summary
+            pass  # Keep full summary without truncation
         
         return summary
     
@@ -2141,7 +2143,7 @@ class AIJSONSummarizer:
         source_doc = json_doc.get('original_document', json_doc)
         
         # Use the longer, enhanced AI summarization with increased max length
-        return self.generate_intelligent_summary(source_doc, query, max_length=400)
+        return self.generate_intelligent_summary(source_doc, query, max_length=10000)
     
     def _fallback_summary(self, json_doc: Dict[str, Any], query: str) -> str:
         """Fallback summary method when AI processing fails"""
@@ -2160,7 +2162,7 @@ class AIJSONSummarizer:
         if 'accommodates' in json_doc:
             summary_parts.append(f"Guests: {json_doc['accommodates']}")
         
-        return ' | '.join(summary_parts[:5])  # Limit to 5 key points
+        return ' | '.join(summary_parts)  # Show ALL key points
 
 
 class SummaryGenerator:
@@ -2179,7 +2181,7 @@ class SummaryGenerator:
             ai_summary = self.ai_summarizer.generate_intelligent_summary(
                 original_doc, 
                 query, 
-                max_length=500
+                max_length=10000
             )
             
             if ai_summary and len(ai_summary.strip()) > 20:  # Require more substantial summaries
@@ -2302,7 +2304,7 @@ class SummaryGenerator:
                 if key_amenities:
                     responses.append(f"Key amenities: {', '.join(key_amenities)}")
                 else:
-                    amenities_preview = amenities_str[:80] + "..." if len(amenities_str) > 80 else amenities_str
+                    amenities_preview = amenities_str  # Show FULL amenities list
                     responses.append(f"Amenities: {amenities_preview}")
             
             elif topic == 'host' and 'host_name' in document:
@@ -2407,10 +2409,10 @@ class AirbnbDataOptimizer:
                 value = doc[field]
                 # Format the value for display
                 if isinstance(value, list):
-                    if len(value) > 5:  # Truncate long lists
-                        formatted_value = ', '.join(str(v) for v in value[:5]) + f' (+{len(value)-5} more)'
-                    else:
-                        formatted_value = ', '.join(str(v) for v in value)
+                    # Show ALL list items regardless of length
+                        formatted_value = ', '.join(str(v) for v in value)  # Show ALL list items
+
+
                 elif isinstance(value, (int, float)):
                     if field == 'price':
                         formatted_value = f'${value}'
@@ -2421,14 +2423,14 @@ class AirbnbDataOptimizer:
                 else:
                     # Truncate long text fields
                     str_value = str(value)
-                    if len(str_value) > 150:
-                        formatted_value = str_value[:150] + '...'
-                    else:
-                        formatted_value = str_value
+                    # Show FULL text regardless of length
+                    formatted_value = str_value  # Show FULL text without truncation
+
+
                 
                 summary_parts.append(f"{field.replace('_', ' ').title()}: {formatted_value}")
         
-        return ' | '.join(summary_parts[:8])  # Limit to 8 key points
+        return ' | '.join(summary_parts)  # Show ALL key points
     
     def get_response_template(self, query_analysis: Dict[str, Any]) -> str:
         """Get appropriate response template based on query analysis"""
@@ -2522,7 +2524,7 @@ class ResponseGenerator:
         response_parts.append("\n")
         
         # Process each result
-        for i, (doc, score) in enumerate(search_results[:5], 1):
+        for i, (doc, score) in enumerate(search_results, 1):
             property_section = self._format_property_result(doc, score, query, i, query_analysis)
             response_parts.append(property_section)
             response_parts.append("\n---\n")
@@ -2628,22 +2630,49 @@ class ResponseGenerator:
             }
         }
         
-        # Check which categories are relevant to the query
-        relevant_categories = []
-        for category, info in field_categories.items():
-            if any(keyword in query_lower for keyword in info['keywords']):
-                relevant_categories.append(category)
+        # SHOW ALL CATEGORIES for comprehensive information display
+        # User wants to see ALL query-relevant fields like price, location, bedrooms etc
+        # regardless of processing speed concerns
+        # Add additional comprehensive field categories to show ALL property information
+        field_categories.update({
+            'calendar': {
+                'keywords': ['available', 'calendar', 'booking', 'minimum', 'maximum', 'nights'],
+                'fields': ['minimum_nights', 'maximum_nights', 'calendar_updated', 'availability_30', 'availability_60', 'availability_90', 'availability_365']
+            },
+            'verification': {
+                'keywords': ['verify', 'verified', 'license', 'instant', 'book'],
+                'fields': ['host_verifications', 'host_identity_verified', 'instant_bookable', 'license']
+            },
+            'policies': {
+                'keywords': ['policy', 'cancel', 'cancellation', 'rule', 'check'],
+                'fields': ['cancellation_policy', 'house_rules']
+            },
+            'coordinates': {
+                'keywords': ['latitude', 'longitude', 'coordinates', 'map'],
+                'fields': ['latitude', 'longitude']
+            },
+            'additional_info': {
+                'keywords': ['notes', 'transit', 'access', 'interaction', 'other'],
+                'fields': ['notes', 'transit', 'access', 'interaction', 'other_host_info', 'calculated_host_listings_count']
+            }
+        })
         
-        # If no specific categories found, use query analysis if available
-        if not relevant_categories and query_analysis:
-            if 'category' in query_analysis:
+        relevant_categories = list(field_categories.keys())  # Show ALL categories always
+        # No longer filtering - showing all categories for comprehensive display
+        # Original filtering code removed to show ALL categories
+
+
+        
+        # Also check for any additional categories from query analysis
+        if query_analysis and 'category' in query_analysis:
+            # Extract category from query analysis
                 query_category = query_analysis['category'].lower()
                 if query_category in field_categories:
                     relevant_categories.append(query_category)
         
-        # If still no categories, include basic info
-        if not relevant_categories:
-            relevant_categories = ['specifications', 'pricing', 'location']
+        # No fallback needed since we always show all categories
+
+
         
         # Extract relevant fields
         for category in relevant_categories:
@@ -2653,10 +2682,10 @@ class ResponseGenerator:
                         value = document[field]
                         # Format the value for display
                         if isinstance(value, list):
-                            if len(value) > 5:  # Truncate long lists
-                                formatted_value = ', '.join(str(v) for v in value[:5]) + f' (+{len(value)-5} more)'
-                            else:
-                                formatted_value = ', '.join(str(v) for v in value)
+                            # Show ALL list items regardless of length
+                            formatted_value = ', '.join(str(v) for v in value)  # Show ALL list items
+
+
                         elif isinstance(value, (int, float)):
                             if field == 'price':
                                 formatted_value = f'${value}'
@@ -2667,10 +2696,10 @@ class ResponseGenerator:
                         else:
                             # Truncate long text fields
                             str_value = str(value)
-                            if len(str_value) > 150:
-                                formatted_value = str_value[:150] + '...'
-                            else:
-                                formatted_value = str_value
+                            # Show FULL text regardless of length
+                            formatted_value = str_value  # Show FULL text without truncation
+
+
                 
                         relevant_fields[field] = formatted_value
         
