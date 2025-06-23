@@ -407,8 +407,8 @@ class RAGService:
         # Define field categories and their keywords
         field_categories = {
             'pricing': {
-                'keywords': ['price', 'cost', 'cheap', 'expensive', 'budget', 'affordable', '$', 'dollar', 'fee'],
-                'fields': ['price', 'cleaning_fee', 'security_deposit', 'extra_people']
+                'keywords': ['price', 'cost', 'cheap', 'expensive', 'budget', 'affordable', '$', 'dollar', 'fee', 'rate', 'nightly', 'weekly', 'monthly', 'pricing', 'charges', 'costs', 'payment', 'rent', 'rental'],
+                'fields': ['price', 'cleaning_fee', 'security_deposit', 'extra_people', 'weekly_price', 'monthly_price', 'nightly_price', 'base_price', 'rate', 'cost', 'fee', 'deposit', 'pricing', 'rent', 'rental_price', 'total_price', 'service_fee', 'taxes', 'additional_fees']
             },
             'location': {
                 'keywords': ['location', 'area', 'neighbourhood', 'neighborhood', 'city', 'near', 'close', 'downtown'],
@@ -469,7 +469,7 @@ class RAGService:
                             # Truncate long text fields
                             str_value = str(value)
                             if len(str_value) > 150:
-                                formatted_value = str_value[:150] + '...'
+                                formatted_value = str_value
                             else:
                                 formatted_value = str_value
                 
@@ -581,19 +581,22 @@ class RAGService:
         if document.get('summary'):
             desc = str(document['summary'])
             if len(desc) > 200:
-                desc = desc[:200] + "..."
+                # Show full description without truncation
+                desc = desc
             summary_parts.append(f"Property description: {desc}")
         elif document.get('description'):
             desc = str(document['description'])
             if len(desc) > 200:
-                desc = desc[:200] + "..."
+                # Show full description without truncation
+                pass
             summary_parts.append(f"Description: {desc}")
         
         # Neighborhood information
         if document.get('neighborhood_overview'):
             neighborhood = str(document['neighborhood_overview'])
             if len(neighborhood) > 150:
-                neighborhood = neighborhood[:150] + "..."
+                # Show full neighborhood information without truncation
+                pass
             summary_parts.append(f"Neighborhood: {neighborhood}")
         
         # Query-specific additions to reach minimum word count
