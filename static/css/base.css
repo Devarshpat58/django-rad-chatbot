@@ -1,0 +1,167 @@
+/* Base CSS for Django RAG Chatbot */
+
+/* Global Variables */
+:root {
+    --primary: #6366f1;
+    --primary-dark: #4f46e5;
+    --secondary: #ec4899;
+    --background: #ffffff;
+    --surface: #f9fafb;
+    --surface-light: #f3f4f6;
+    --text: #1f2937;
+    --text-muted: #6b7280;
+    --border: #e5e7eb;
+    --success: #10b981;
+    --error: #ef4444;
+    --warning: #f59e0b;
+    --shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    --shadow-lg: 0 10px 25px rgba(0, 0, 0, 0.1);
+    --gradient: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+}
+
+/* Dark mode support */
+@media (prefers-color-scheme: dark) {
+    :root {
+        --background: #111827;
+        --surface: #1f2937;
+        --surface-light: #374151;
+        --text: #f9fafb;
+        --text-muted: #9ca3af;
+        --border: #374151;
+    }
+}
+
+/* Base reset */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+    background: var(--background);
+    color: var(--text);
+    line-height: 1.6;
+}
+
+/* Utility classes */
+.container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 1rem;
+}
+
+.text-center {
+    text-align: center;
+}
+
+.text-muted {
+    color: var(--text-muted);
+}
+
+.mb-1 { margin-bottom: 0.25rem; }
+.mb-2 { margin-bottom: 0.5rem; }
+.mb-3 { margin-bottom: 1rem; }
+.mb-4 { margin-bottom: 1.5rem; }
+
+.mt-1 { margin-top: 0.25rem; }
+.mt-2 { margin-top: 0.5rem; }
+.mt-3 { margin-top: 1rem; }
+.mt-4 { margin-top: 1.5rem; }
+
+/* Button styles */
+.btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.75rem 1.5rem;
+    border: none;
+    border-radius: 0.75rem;
+    font-weight: 600;
+    text-decoration: none;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.btn-primary {
+    background: var(--gradient);
+    color: white;
+}
+
+.btn-primary:hover {
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-lg);
+}
+
+.btn-secondary {
+    background: var(--surface);
+    color: var(--text);
+    border: 1px solid var(--border);
+}
+
+.btn-secondary:hover {
+    border-color: var(--primary);
+    color: var(--primary);
+}
+
+/* Card styles */
+.card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 1rem;
+    padding: 1.5rem;
+    box-shadow: var(--shadow);
+    transition: all 0.2s ease;
+}
+
+.card:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-lg);
+    border-color: var(--primary);
+}
+
+/* Form styles */
+.form-group {
+    margin-bottom: 1rem;
+}
+
+.form-label {
+    display: block;
+    margin-bottom: 0.5rem;
+    font-weight: 500;
+    color: var(--text);
+}
+
+.form-control {
+    width: 100%;
+    padding: 0.75rem;
+    border: 1px solid var(--border);
+    border-radius: 0.5rem;
+    font-size: 1rem;
+    background: var(--background);
+    color: var(--text);
+    transition: border-color 0.2s ease;
+}
+
+.form-control:focus {
+    outline: none;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .container {
+        padding: 0 0.5rem;
+    }
+    
+    .btn {
+        padding: 0.5rem 1rem;
+        font-size: 0.875rem;
+    }
+    
+    .card {
+        padding: 1rem;
+    }
+}

@@ -14,6 +14,8 @@ import json
 import logging
 
 from rag_api.services import RAGService
+from console_logger import ConsoleLogger
+from rag_api.services_enhanced import EnhancedRAGService
 from rag_api.models import SearchSession, SearchQuery
 
 logger = logging.getLogger(__name__)
@@ -30,7 +32,7 @@ class HomeView(TemplateView):
         
         try:
             # Get system status
-            rag_service = RAGService.get_instance()
+            rag_service = EnhancedRAGService.get_instance()
             system_status = rag_service.get_system_status()
             context['system_ready'] = system_status.get('status') == 'ready'
             
@@ -61,7 +63,7 @@ class SearchInterfaceView(TemplateView):
         
         try:
             # Get system status
-            rag_service = RAGService.get_instance()
+            rag_service = EnhancedRAGService.get_instance()
             system_status = rag_service.get_system_status()
             context['system_status'] = system_status
             
@@ -159,7 +161,7 @@ class DashboardView(TemplateView):
             })
             
             # System status
-            rag_service = RAGService.get_instance()
+            rag_service = EnhancedRAGService.get_instance()
             system_status = rag_service.get_system_status()
             context['system_status'] = system_status
             
@@ -196,11 +198,28 @@ def ajax_search(request):
         )
         
         # Process query
-        rag_service = RAGService.get_instance()
+        rag_service = EnhancedRAGService.get_instance()
+        # About to process query - adding console logging after
         result = rag_service.process_query(
             query_text=query_text,
             session_id=session_key
         )
+        
+        # Console logging: Show response before sending to frontend
+        ConsoleLogger.log_django_web_response(query_text, result, session_key)
+        # Replacing manual logging with console logger function
+
+
+
+
+
+
+
+
+
+
+
+
         
         # Store query
         search_query = SearchQuery.objects.create(
@@ -274,7 +293,7 @@ def ajax_chat(request):
         )
         
         # Process query using chat API endpoint logic
-        rag_service = RAGService.get_instance()
+        rag_service = EnhancedRAGService.get_instance()
         result = rag_service.process_query(
             query_text=message,
             session_id=effective_session_id
@@ -324,7 +343,7 @@ def ajax_chat(request):
     except Exception as e:
         logger.error(f"AJAX chat error: {str(e)}")
         return JsonResponse({
-            'error': f'Chat failed: {str(e)}',
+            'error': 'The AI system is still starting up. Please wait a moment and try again.' if 'not initialized' in str(e) else f'Sorry, there was an error processing your request: {str(e)}',
             'success': False
         }, status=500)
 
@@ -339,7 +358,7 @@ def ajax_system_status(request):
     AJAX endpoint for system status
     """
     try:
-        rag_service = RAGService.get_instance()
+        rag_service = EnhancedRAGService.get_instance()
         system_status = rag_service.get_system_status()
         
         # Clean any datetime objects in system status
