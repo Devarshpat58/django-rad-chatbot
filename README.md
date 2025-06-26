@@ -7,6 +7,8 @@ A sophisticated Retrieval-Augmented Generation (RAG) system built with Django fo
 ## ✨ Key Features
 
 - **🔍 Advanced Semantic Search**: AI-powered property search using sentence transformers
+- **🌍 Multi-Language Support**: Self-contained translation service for 6 languages (Spanish, French, German, Italian, Portuguese, English)
+- **🔑 No API Keys Required**: Built-in translation patterns without external dependencies
 - **📊 Intelligent Query Processing**: Natural language understanding with numeric constraints
 - **🤖 AI-Generated Summaries**: 200+ word comprehensive property analysis
 - **📋 Query-Relevant Fields**: Smart field extraction based on user intent
@@ -101,6 +103,56 @@ A sophisticated Retrieval-Augmented Generation (RAG) system built with Django fo
 - **System Status**: `GET /api/v1/status/`
 - **Health Check**: `GET /api/v1/health/`
 
+## 🌍 Multi-Language Translation Service
+
+### Supported Languages
+The system includes a self-contained translation service that supports:
+- **Spanish** (Español)
+- **French** (Français) 
+- **German** (Deutsch)
+- **Italian** (Italiano)
+- **Portuguese** (Português)
+- **English** (default)
+
+### Translation Features
+- **🔑 No API Keys Required**: Completely self-contained using built-in Python libraries
+- **⚡ Fast Processing**: Instant pattern-based translation with LRU caching
+- **🎯 Real Estate Focused**: Specialized patterns for property search terminology
+- **🔍 Smart Detection**: Regex-based language detection with confidence scoring
+- **📊 Translation Metadata**: API responses include translation information
+
+### Example Translations
+```
+Spanish: "Encuentra apartamentos de 2 dormitorios cerca del centro"
+→ English: "find apartments de 2 bedrooms cerca del centro"
+
+French: "Trouvez des appartements de 2 chambres avec piscine"
+→ English: "find des apartments de 2 bedrooms avec piscine"
+
+German: "Finden Sie Wohnungen mit 2 Schlafzimmern und Parkplatz"
+→ English: "find Sie apartments mit 2 bedrooms und Parkplatz"
+```
+
+### API Usage
+The translation service is automatically integrated into all search endpoints:
+```bash
+curl -X POST http://localhost:8000/api/v1/chat/ \
+     -H "Content-Type: application/json" \
+     -d '{"message": "Encuentra apartamentos de 2 dormitorios"}'
+```
+
+Response includes translation metadata:
+```json
+{
+  "response": "Found 5 apartments matching your criteria...",
+  "translation_info": {
+    "original_language": "spanish",
+    "confidence": 0.95,
+    "translated_query": "find apartments de 2 bedrooms"
+  }
+}
+```
+
 ## 💬 Using the Chat Interface
 
 ### Example Queries:
@@ -147,6 +199,8 @@ django_rag_api/
 ├── rag_api/               # Django REST API
 │   ├── views.py           # API endpoints
 │   ├── services.py        # RAG service integration
+│   ├── translation_service.py # Self-contained translation service
+│   ├── urls.py            # URL routing
 │   └── models.py          # Django models
 ├── web_interface/         # Web UI
 │   ├── views.py           # Web views
