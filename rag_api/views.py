@@ -35,6 +35,7 @@ from .serializers import (
     ChatResponseSerializer, BulkSearchSerializer, BulkSearchResponseSerializer
 )
 from .services import RAGService
+from .translation_service import translate_query_to_english, is_translation_available
 
 logger = logging.getLogger(__name__)
 
@@ -91,8 +92,18 @@ class SearchAPIView(APIView):
             rag_service = RAGService.get_instance()
             start_time = timezone.now()
             
+            # Translate query to English if needed
+            translation_result = translate_query_to_english(query_text)
+            english_query = translation_result['english_query']
+            original_language = translation_result['detected_language']
+            translation_needed = translation_result['translation_needed']
+            
+            # Log translation if it occurred
+            if translation_needed:
+                logger.info(f"Translated query from {original_language}: '{query_text}' -> '{english_query}'")
+            
             result = rag_service.process_query(
-                query_text=query_text,
+                query_text=english_query,  # Use translated query for processing
                 session_id=session_id,
                 max_results=max_results,
                 filters=filters
@@ -119,7 +130,13 @@ class SearchAPIView(APIView):
                 'response': result['response'],
                 'results': result['metadata'].get('results', []),
                 'execution_time': result['metadata'].get('execution_time', 0),
-                'timestamp': search_query.created_at.isoformat()
+                'timestamp': search_query.created_at.isoformat(),
+                'english_query': english_query,  # Include translated query
+                'translation': {
+                    'original_language': original_language,
+                    'translation_needed': translation_needed,
+                    'translation_available': is_translation_available()
+                }
             }
             
             if include_metadata:
@@ -156,10 +173,20 @@ class ChatAPIView(APIView):
         conversation_id = data.get('conversation_id') or request.session.session_key
         
         try:
+            # Translate message to English if needed
+            translation_result = translate_query_to_english(message)
+            english_message = translation_result['english_query']
+            original_language = translation_result['detected_language']
+            translation_needed = translation_result['translation_needed']
+            
+            # Log translation if it occurred
+            if translation_needed:
+                logger.info(f"Translated chat message from {original_language}: '{message}' -> '{english_message}'")
+            
             # Process message using RAG service
             rag_service = RAGService.get_instance()
             result = rag_service.process_query(
-                query_text=message,
+                query_text=english_message,  # Use translated message
                 session_id=conversation_id
             )
             
@@ -194,7 +221,13 @@ class ChatAPIView(APIView):
                 'execution_time': result['metadata'].get('execution_time', 0),
                 'num_results': result['metadata'].get('num_results', 0),
                 'max_similarity_score': result['metadata'].get('max_similarity_score', 0.0),
-                'avg_similarity_score': result['metadata'].get('avg_similarity_score', 0.0)
+                'avg_similarity_score': result['metadata'].get('avg_similarity_score', 0.0),
+                'english_message': english_message,  # Include translated message
+                'translation': {
+                    'original_language': original_language,
+                    'translation_needed': translation_needed,
+                    'translation_available': is_translation_available()
+                }
             }
             
             return Response(response_data, status=status.HTTP_200_OK)
@@ -265,6 +298,43 @@ class HealthCheckAPIView(APIView):
                 status=status.HTTP_503_SERVICE_UNAVAILABLE
             )
 
+
+class TranslationStatusAPIView(APIView):
+    """
+    Translation service status endpoint
+    """
+    permission_classes = [AllowAny]
+    
+    @extend_schema(
+        description="Get translation service status and supported languages",
+        responses={200: {'type': 'object', 'properties': {'available': {'type': 'boolean'}}}}
+    )
+    def get(self, request):
+        try:
+            from .translation_service import get_translation_service
+            
+            service = get_translation_service()
+            status_info = service.get_service_status()
+            
+            return Response({
+                'translation_available': status_info['available'],
+                'service_name': status_info['service'],
+                'supported_languages_count': status_info['supported_languages_count'],
+                'cache_size': status_info['cache_size'],
+                'supported_languages': service.get_supported_languages() if status_info['available'] else {},
+                'timestamp': timezone.now()
+            }, status=status.HTTP_200_OK)
+            
+        except Exception as e:
+            logger.error(f"Translation status error: {str(e)}")
+            return Response(
+                {
+                    'translation_available': False,
+                    'error': str(e),
+                    'timestamp': timezone.now()
+                },
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
 
 class PropertyDocumentViewSet(viewsets.ModelViewSet):
     """

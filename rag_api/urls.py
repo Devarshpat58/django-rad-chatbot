@@ -31,6 +31,7 @@ urlpatterns = [
     # System Endpoints
     path('status/', views.SystemStatusAPIView.as_view(), name='system_status'),
     path('health/', views.HealthCheckAPIView.as_view(), name='health_check'),
+    path('translation-status/', views.TranslationStatusAPIView.as_view(), name='translation_status'),
     
     # Include router URLs for ViewSets
     path('', include(router.urls)),
