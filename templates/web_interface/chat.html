@@ -4,177 +4,439 @@
 
 {% block content %}
 <style>
-    .chat-container {
-        max-width: 900px;
-        margin: 0 auto;
-        height: 80vh;
+    /* Enhanced CSS Variables with Vibrant Colors */
+    :root {
+        /* Core Colors */
+        --background: #f8fafc;
+        --surface: #ffffff;
+        --surface-light: #f1f5f9;
+        --surface-hover: #e2e8f0;
+        --text: #1e293b;
+        --text-muted: #64748b;
+        --border: #e2e8f0;
+        --primary: #3b82f6;
+        --radius: 8px;
+        --shadow-color: 0 1px 3px rgba(0,0,0,0.1);
+        
+        /* Vibrant Gradient Collection */
+        --gradient-primary: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        --gradient-accent: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+        --gradient-ocean: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+        --gradient-sunset: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
+        --gradient-forest: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
+        --gradient-purple: linear-gradient(135deg, #9d50bb 0%, #6e48aa 100%);
+        --gradient-mint: linear-gradient(135deg, #00d2ff 0%, #3a7bd5 100%);
+        --gradient-fire: linear-gradient(135deg, #ff6a00 0%, #ee0979 100%);
+        --gradient-warm: linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%);
+        --gradient-cool: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%);
+        --gradient-cosmic: linear-gradient(135deg, #d299c2 0%, #fef9d7 100%);
+        --gradient-electric: linear-gradient(135deg, #08fdd8 0%, #9d50bb 100%);
+        --gradient-tropical: linear-gradient(135deg, #ff9a9e 0%, #fecfef 100%);
+        --gradient-aurora: linear-gradient(135deg, #a8caba 0%, #5d4e75 100%);
+    }
+    
+    /* Dark mode support */
+    @media (prefers-color-scheme: dark) {
+        :root {
+            --background: #0f172a;
+            --surface: #1e293b;
+            --surface-light: #334155;
+            --surface-hover: #475569;
+            --text: #f1f5f9;
+            --text-muted: #94a3b8;
+            --border: #334155;
+            --shadow-color: 0 1px 3px rgba(0,0,0,0.4);
+        }
+    }
+    
+    /* ChatGPT-inspired minimal design */
+    body {
+        margin: 0;
+        padding: 0;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+        background: var(--background);
+        color: var(--text);
+        overflow-x: hidden;
+    }
+    
+    .main-content {
+        margin-top: 0 !important;
+        padding: 0 !important;
+        min-height: 100vh;
+    }
+    
+    .container {
+        max-width: none !important;
+        margin: 0 !important;
+        padding: 0 !important;
+    }
+    
+    /* Hide navbar for minimal design */
+    .navbar {
+        display: none;
+    }
+    
+    /* Main chat container */
+    .chat-layout {
+        display: flex;
+        height: 100vh;
+        width: 100vw;
+        overflow: hidden;
+    }
+    
+    /* Sidebar (minimal) */
+    .sidebar {
+        width: 260px;
+        background: var(--surface-light);
+        border-right: 1px solid var(--border);
+        padding: 12px;
         display: flex;
         flex-direction: column;
-    }
-    
-    .chat-header {
-        text-align: center;
-        margin-bottom: 2rem;
-    }
-    
-    .chat-title {
-        font-size: 2.5rem;
-        font-weight: 600;
-        background: var(--gradient);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        margin-bottom: 0.5rem;
-    }
-    
-    .chat-messages {
-        flex: 1;
-        background: var(--surface);
-        border-radius: 20px;
-        border: 1px solid var(--border);
         overflow-y: auto;
-        padding: 1.5rem;
-        margin-bottom: 1.5rem;
+    }
+    
+    .new-chat-btn {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        padding: 12px 16px;
+        margin-bottom: 20px;
+        cursor: pointer;
+        transition: all 0.2s;
+        font-size: 14px;
+        font-weight: 500;
+        color: var(--text);
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+    
+    .new-chat-btn:hover {
+        background: var(--surface-hover);
+    }
+    
+    .sidebar-header {
+        font-size: 12px;
+        font-weight: 600;
+        color: var(--text-muted);
+        margin-bottom: 8px;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+    
+    /* Main conversation area */
+    .conversation-area {
+        flex: 1;
         display: flex;
         flex-direction: column;
-        gap: 1rem;
-        box-shadow: var(--shadow);
+        overflow: hidden;
     }
     
-    .message {
-        display: flex;
-        align-items: flex-start;
-        gap: 0.75rem;
-        max-width: 80%;
-        animation: messageSlide 0.4s ease;
-    }
-    
-    .message.user {
-        align-self: flex-end;
-        flex-direction: row-reverse;
-    }
-    
-    .message.assistant {
-        align-self: flex-start;
-    }
-    
-    .message-avatar {
-        width: 40px;
-        height: 40px;
-        border-radius: 50%;
+    /* Chat header (minimal) */
+    .chat-header {
+        height: 52px;
+        border-bottom: 1px solid var(--border);
         display: flex;
         align-items: center;
         justify-content: center;
+        background: var(--surface);
         flex-shrink: 0;
-        transition: all 0.3s ease;
+    }
+    
+    .chat-title {
+        font-size: 16px;
+        font-weight: 600;
+        color: var(--text);
+        margin: 0;
+    }
+    
+    /* Messages container */
+    .messages-container {
+        flex: 1;
+        overflow-y: auto;
+        padding: 0;
+        background: var(--background);
+    }
+    
+    .messages-wrapper {
+        max-width: 768px;
+        margin: 0 auto;
+        padding: 24px 16px;
+    }
+    
+    /* Message styles */
+    .message {
+        margin-bottom: 32px;
+        word-wrap: break-word;
+        overflow-wrap: break-word;
+        animation: messageSlide 0.3s ease;
+    }
+    
+    .message-header {
+        display: flex;
+        align-items: center;
+        margin-bottom: 8px;
+    }
+    
+    .message-avatar {
+        width: 24px;
+        height: 24px;
+        border-radius: 2px;
+        margin-right: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 12px;
+        font-weight: 600;
+        flex-shrink: 0;
     }
     
     .message.user .message-avatar {
-        background: var(--gradient);
+        background: var(--text);
+        color: var(--background);
     }
     
     .message.assistant .message-avatar {
-        background: var(--surface-light);
-        border: 1px solid var(--border);
+        background: var(--primary);
+        color: white;
+    }
+    
+    .message-author {
+        font-size: 14px;
+        font-weight: 600;
+        color: var(--text);
     }
     
     .message-content {
-        background: var(--surface-light);
-        padding: 1rem 1.25rem;
-        border-radius: 18px;
+        margin-left: 36px;
         line-height: 1.6;
-        position: relative;
-        transition: all 0.3s ease;
-        border: 1px solid var(--border);
+        color: var(--text);
+        word-wrap: break-word;
+        overflow-wrap: break-word;
+        max-width: 100%;
     }
     
-    .message.user .message-content {
-        background: var(--gradient);
-        color: white;
-        border-color: transparent;
+    .enhanced-content {
+        max-width: 100%;
     }
     
-    .message:hover .message-content {
-        transform: translateY(-2px);
-        box-shadow: var(--shadow);
-    }
-    
-    .message-meta {
-        font-size: 0.75rem;
-        color: var(--text-muted);
-        margin-top: 0.5rem;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-    }
-    
-    .message.user .message-meta {
-        color: rgba(255, 255, 255, 0.8);
-    }
-    
-    .typing-indicator {
-        display: flex;
-        align-items: center;
-        gap: 0.75rem;
-        max-width: 80%;
-        align-self: flex-start;
-        opacity: 0;
-        transform: translateY(10px);
-        animation: messageSlide 0.4s ease forwards;
-    }
-    
-    .typing-dots {
+    .response-summary {
         background: var(--surface-light);
         border: 1px solid var(--border);
-        border-radius: 18px;
-        padding: 1rem 1.25rem;
+        border-radius: var(--radius);
+        padding: 12px;
+        margin: 12px 0;
+        font-size: 13px;
+    }
+    
+    .summary-stats {
         display: flex;
-        gap: 0.3rem;
+        gap: 16px;
+        flex-wrap: wrap;
     }
     
-    .typing-dot {
-        width: 8px;
-        height: 8px;
-        background: var(--text-muted);
-        border-radius: 50%;
-        animation: typingPulse 1.4s ease-in-out infinite;
+    .stat-item {
+        font-size: 13px;
+        color: var(--text-muted);
     }
     
-    .typing-dot:nth-child(2) {
-        animation-delay: 0.2s;
+    .stat-item strong {
+        color: var(--primary);
+        font-weight: 600;
     }
     
-    .typing-dot:nth-child(3) {
-        animation-delay: 0.4s;
+    .detailed-results {
+        margin-top: 16px;
     }
     
-    .chat-input-container {
+    .result-item {
         background: var(--surface);
-        border-radius: 25px;
-        border: 2px solid var(--border);
-        padding: 0.75rem;
-        display: flex;
-        align-items: center;
-        gap: 1rem;
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        padding: 20px;
+        margin-bottom: 20px;
         transition: all 0.3s ease;
-        box-shadow: var(--shadow);
+        position: relative;
+        overflow: hidden;
+        box-shadow: var(--shadow-color);
     }
     
-    .chat-input-container:focus-within {
+    .result-item::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 2px;
+        background: var(--gradient-accent);
+        transform: scaleX(0);
+        transition: transform 0.3s ease;
+        transform-origin: left;
+    }
+    
+    .result-item:hover {
         border-color: var(--primary);
-        box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1), var(--shadow-lg);
-        transform: translateY(-2px);
+        transform: translateY(-3px);
+    }
+    
+    .result-item:hover::before {
+        transform: scaleX(1);
+    }
+    
+    .fields-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 8px;
+        margin-top: 12px;
+    }
+    
+    .field-item {
+        background: var(--surface-light);
+        border-radius: 8px;
+        padding: 12px 16px;
+        border-left: 3px solid transparent;
+        transition: all 0.3s ease;
+        position: relative;
+    }
+    
+    /* Enhanced Field Item Colors */
+    .field-item:nth-child(16n+1) { border-left-color: #667eea; }
+    .field-item:nth-child(16n+2) { border-left-color: #4facfe; }
+    .field-item:nth-child(16n+3) { border-left-color: #43e97b; }
+    .field-item:nth-child(16n+4) { border-left-color: #f093fb; }
+    .field-item:nth-child(16n+5) { border-left-color: #fa709a; }
+    .field-item:nth-child(16n+6) { border-left-color: #FF6B6B; }
+    .field-item:nth-child(16n+7) { border-left-color: #4ECDC4; }
+    .field-item:nth-child(16n+8) { border-left-color: #45B7D1; }
+    
+    .field-item:hover {
+        background: var(--surface);
+        transform: translateX(5px);
+        box-shadow: var(--shadow-color);
+    }
+    
+    .field-name {
+        font-size: 11px;
+        font-weight: 600;
+        color: var(--text-muted);
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        margin-bottom: 2px;
+    }
+    
+    .field-value {
+        font-size: 13px;
+        color: var(--text);
+        font-weight: 500;
+        word-wrap: break-word;
+        overflow-wrap: break-word;
+    }
+    
+    /* AI Summary styling */
+    .ai-summary {
+        margin-top: 16px;
+        padding: 16px;
+        background: var(--surface);
+        border-radius: 12px;
+        border: 1px solid var(--border);
+        box-shadow: var(--shadow-color);
+    }
+    
+    .ai-summary h6 {
+        margin: 0 0 8px 0;
+        color: var(--text);
+        font-weight: 700;
+        font-size: 14px;
+    }
+    
+    .summary-content {
+        color: var(--text-muted);
+        font-size: 13px;
+        line-height: 1.5;
+        font-weight: 500;
+    }
+    
+    /* JSON toggle and display */
+    .json-toggle {
+        background: var(--gradient-mint);
+        border: none;
+        border-radius: 25px;
+        padding: 12px 20px;
+        cursor: pointer;
+        font-size: 12px;
+        color: white;
+        font-weight: 600;
+        margin-top: 16px;
+        transition: all 0.3s ease;
+    }
+    
+    .json-toggle:hover {
+        background: var(--gradient-forest);
+        transform: translateY(-3px) scale(1.05);
+    }
+    
+    .json-data {
+        margin-top: 8px;
+        border-radius: var(--radius);
+        overflow: hidden;
+        max-height: 300px;
+        overflow-y: auto;
+        border: 2px solid var(--border);
+        background: var(--surface);
+        box-shadow: var(--shadow-color);
+    }
+    
+    .json-data pre {
+        background: var(--surface-light);
+        color: var(--text);
+        padding: 16px;
+        margin: 0;
+        font-size: 12px;
+        line-height: 1.5;
+        word-wrap: break-word;
+        overflow-wrap: break-word;
+        white-space: pre-wrap;
+        font-family: 'Courier New', monospace;
+    }
+    
+    /* Input area */
+    .input-area {
+        border-top: 1px solid var(--border);
+        background: var(--surface);
+        padding: 20px;
+        flex-shrink: 0;
+    }
+    
+    .input-wrapper {
+        max-width: 768px;
+        margin: 0 auto;
+        position: relative;
+    }
+    
+    .input-container {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        padding: 12px 48px 12px 16px;
+        transition: all 0.2s;
+        box-shadow: var(--shadow-color);
+    }
+    
+    .input-container:focus-within {
+        border-color: var(--primary);
+        box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.1);
     }
     
     .chat-input {
-        flex: 1;
+        width: 100%;
         background: transparent;
         border: none;
         outline: none;
         color: var(--text);
-        font-size: 1rem;
-        padding: 0.5rem;
+        font-size: 16px;
+        line-height: 1.5;
         resize: none;
-        max-height: 120px;
+        max-height: 200px;
         min-height: 24px;
     }
     
@@ -182,122 +444,161 @@
         color: var(--text-muted);
     }
     
-    .chat-send-btn {
-        background: var(--gradient);
+    .send-button {
+        position: absolute;
+        right: 8px;
+        top: 50%;
+        transform: translateY(-50%);
+        background: var(--gradient-primary);
         border: none;
-        width: 44px;
-        height: 44px;
-        border-radius: 50%;
-        cursor: pointer;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        transition: all 0.3s ease;
-        flex-shrink: 0;
-    }
-    
-    .chat-send-btn:hover {
-        transform: scale(1.1);
-        box-shadow: 0 5px 15px rgba(99, 102, 241, 0.4);
-    }
-    
-    .chat-send-btn:disabled {
-        opacity: 0.5;
-        cursor: not-allowed;
-        transform: none;
-    }
-    
-    .chat-suggestions {
-        display: flex;
-        gap: 0.5rem;
-        flex-wrap: wrap;
-        margin-bottom: 1rem;
-    }
-    
-    .suggestion-bubble {
-        background: var(--surface-light);
-        border: 1px solid var(--border);
-        border-radius: 20px;
-        padding: 0.5rem 1rem;
-        cursor: pointer;
-        transition: all 0.3s ease;
-        font-size: 0.9rem;
-        color: var(--text-muted);
-    }
-    
-    .suggestion-bubble:hover {
-        background: var(--primary);
-        color: white;
-        transform: translateY(-2px);
-    }
-    
-    .welcome-message {
-        text-align: center;
-        padding: 2rem;
-        color: var(--text-muted);
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        gap: 1rem;
-    }
-    
-    .welcome-icon {
-        width: 60px;
-        height: 60px;
-        background: var(--gradient);
-        border-radius: 50%;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        animation: pulse 2s ease-in-out infinite;
-    }
-    
-    .chat-actions {
-        display: flex;
-        gap: 0.5rem;
-        align-items: center;
-    }
-    
-    .action-btn {
-        background: var(--surface-light);
-        border: 1px solid var(--border);
         border-radius: 8px;
         width: 36px;
         height: 36px;
         cursor: pointer;
+        transition: all 0.3s ease;
         display: flex;
         align-items: center;
         justify-content: center;
-        transition: all 0.3s ease;
+        color: white;
+    }
+    
+    .send-button:hover {
+        background: var(--gradient-accent);
+        transform: translateY(-50%) scale(1.05);
+    }
+    
+    .send-button:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+    }
+    
+    /* Welcome message */
+    .welcome-message {
+        text-align: center;
+        padding: 48px 24px;
         color: var(--text-muted);
     }
     
-    .action-btn:hover {
-        background: var(--primary);
-        color: white;
-        transform: scale(1.1);
+    .welcome-title {
+        font-size: 24px;
+        font-weight: 600;
+        color: var(--text);
+        margin-bottom: 8px;
     }
     
-    .session-info {
-        background: var(--surface-light);
+    .welcome-subtitle {
+        font-size: 16px;
+        margin-bottom: 32px;
+    }
+    
+    .suggestion-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        gap: 12px;
+        max-width: 600px;
+        margin: 0 auto;
+    }
+    
+    .suggestion-card {
+        background: var(--surface);
         border: 1px solid var(--border);
         border-radius: 12px;
-        padding: 1rem;
-        margin-bottom: 1rem;
+        padding: 20px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        text-align: left;
+    }
+    
+    .suggestion-card:hover {
+        border-color: var(--primary);
+        background: var(--surface-light);
+        transform: translateY(-5px);
+    }
+    
+    .suggestion-title {
+        font-size: 14px;
+        font-weight: 600;
+        color: var(--text);
+        margin-bottom: 4px;
+    }
+    
+    .suggestion-desc {
+        font-size: 12px;
+        color: var(--text-muted);
+    }
+    
+    /* Typing indicator */
+    .typing-indicator {
         display: flex;
-        justify-content: space-between;
         align-items: center;
-        font-size: 0.9rem;
+        margin-left: 36px;
     }
     
-    .session-badge {
+    .typing-dots {
+        display: flex;
+        gap: 4px;
+    }
+    
+    .typing-dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
         background: var(--primary);
-        color: white;
-        padding: 0.25rem 0.75rem;
-        border-radius: 12px;
-        font-size: 0.8rem;
+        animation: typingPulse 1.4s ease-in-out infinite;
     }
     
+    .typing-dot:nth-child(2) { animation-delay: 0.2s; }
+    .typing-dot:nth-child(3) { animation-delay: 0.4s; }
+    
+    /* Comparison tables */
+    .comparison-toggle {
+        background: var(--gradient-primary);
+        color: white;
+        border: none;
+        border-radius: 8px;
+        padding: 10px 20px;
+        font-size: 13px;
+        font-weight: 600;
+        cursor: pointer;
+        margin-top: 16px;
+        transition: all 0.3s ease;
+    }
+    
+    .comparison-toggle:hover {
+        background: var(--gradient-accent);
+        transform: translateY(-2px);
+    }
+    
+    .comparison-table-container {
+        margin-top: 16px;
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        overflow: hidden;
+        background: var(--surface);
+        max-height: 400px;
+        overflow-y: auto;
+    }
+    
+    .comparison-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 13px;
+    }
+    
+    .comparison-table th,
+    .comparison-table td {
+        padding: 12px;
+        text-align: left;
+        border-bottom: 1px solid var(--border);
+    }
+    
+    .comparison-table th {
+        background: var(--surface-light);
+        font-weight: 600;
+        color: var(--text);
+    }
+    
+    /* Animations */
     @keyframes messageSlide {
         from {
             opacity: 0;
@@ -311,7 +612,7 @@
     
     @keyframes typingPulse {
         0%, 60%, 100% {
-            opacity: 0.3;
+            opacity: 0.4;
             transform: scale(0.8);
         }
         30% {
@@ -320,437 +621,157 @@
         }
     }
     
+    /* Responsive design */
     @media (max-width: 768px) {
-        .chat-container {
-            height: 75vh;
+        .sidebar {
+            display: none;
         }
         
-        .chat-title {
-            font-size: 2rem;
+        .messages-wrapper {
+            padding: 16px 12px;
         }
         
-        .message {
-            max-width: 95%;
-        }
-        
-        .chat-messages {
-            padding: 1rem;
-        }
-    }
-    
-    /* Enhanced Message Styles */
-    .enhanced-message {
-        max-width: 95%;
-    }
-    
-    .enhanced-content {
-        max-width: none;
-    }
-    
-    .response-text {
-        margin-bottom: 1rem;
-        padding-bottom: 1rem;
-        border-bottom: 1px solid var(--border);
-    }
-    
-    .response-summary {
-        background: var(--surface-light);
-        border: 1px solid var(--border);
-        border-radius: 12px;
-        padding: 1rem;
-        margin: 1rem 0;
-    }
-    
-    .summary-stats {
-        display: flex;
-        gap: 1.5rem;
-        flex-wrap: wrap;
-    }
-    
-    .stat-item {
-        display: flex;
-        align-items: center;
-        gap: 0.25rem;
-        font-size: 0.9rem;
-        color: var(--text-muted);
-    }
-    
-    .stat-item strong {
-        color: var(--primary);
-        font-weight: 600;
-    }
-    
-    .detailed-results {
-        margin-top: 1.5rem;
-    }
-    
-    .results-header {
-        margin-bottom: 1rem;
-        padding-bottom: 0.5rem;
-        border-bottom: 2px solid var(--border);
-    }
-    
-    .results-header h4 {
-        margin: 0;
-        color: var(--primary);
-        font-size: 1.1rem;
-        font-weight: 600;
-    }
-    
-    .result-item {
-        background: var(--surface);
-        border: 1px solid var(--border);
-        border-radius: 12px;
-        padding: 1.5rem;
-        margin-bottom: 1.5rem;
-        transition: all 0.3s ease;
-    }
-    
-    .result-item:hover {
-        box-shadow: var(--shadow-lg);
-        transform: translateY(-2px);
-    }
-    
-    .result-header {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        margin-bottom: 1rem;
-        padding-bottom: 0.5rem;
-        border-bottom: 1px solid var(--border);
-    }
-    
-    .result-header h5 {
-        margin: 0;
-        color: var(--text);
-        font-size: 1rem;
-        font-weight: 600;
-    }
-    
-    .toggle-btn {
-        background: none;
-        border: none;
-        cursor: pointer;
-        font-size: 1.2rem;
-        color: var(--primary);
-        transition: transform 0.3s ease;
-    }
-    
-    .toggle-btn:hover {
-        transform: scale(1.2);
-    }
-    
-    .query-relevant-fields {
-        margin-bottom: 1.5rem;
-    }
-    
-    .query-relevant-fields h6,
-    .ai-summary-section h6 {
-        margin: 0 0 0.75rem 0;
-        color: var(--primary);
-        font-size: 0.95rem;
-        font-weight: 600;
-        text-transform: uppercase;
-        letter-spacing: 0.5px;
-    }
-    
-    .fields-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-        gap: 0.75rem;
-    }
-    
-    .field-item {
-        background: var(--surface-light);
-        border: 1px solid var(--border);
-        border-radius: 8px;
-        padding: 0.75rem;
-        display: flex;
-        flex-direction: column;
-        gap: 0.25rem;
-    }
-    
-    .field-name {
-        font-size: 0.85rem;
-        color: var(--text-muted);
-        font-weight: 500;
-        text-transform: uppercase;
-        letter-spacing: 0.3px;
-    }
-    
-    .field-value {
-        font-size: 0.95rem;
-        color: var(--text);
-        font-weight: 600;
-        word-break: break-word;
-    }
-    
-    .ai-summary-section {
-        margin-bottom: 1.5rem;
-    }
-    
-    .ai-summary {
-        background: var(--surface-light);
-        border: 1px solid var(--border);
-        border-radius: 12px;
-        padding: 1.25rem;
-        line-height: 1.7;
-        color: var(--text);
-        font-size: 0.95rem;
-        position: relative;
-        overflow: hidden;
-        box-shadow: var(--shadow);
-    }
-    
-    .ai-summary:hover {
-        background: var(--surface);
-        transform: translateY(-1px);
-        transition: all 0.3s ease;
-    }
-    
-    .ai-summary::before {
-        content: '';
-        position: absolute;
-        top: 0;
-        left: 0;
-        width: 4px;
-        height: 100%;
-        background: var(--gradient);
-    }
-    
-    .json-data-section {
-        margin-top: 1rem;
-    }
-    
-    .json-toggle {
-        background: var(--surface-light);
-        border: 1px solid var(--border);
-        border-radius: 8px;
-        padding: 0.75rem 1rem;
-        cursor: pointer;
-        transition: all 0.3s ease;
-        font-size: 0.9rem;
-        color: var(--text);
-        width: 100%;
-        text-align: left;
-        display: flex;
-        align-items: center;
-        gap: 0.5rem;
-    }
-    
-    .json-toggle:hover {
-        background: var(--primary);
-        color: white;
-        transform: translateY(-1px);
-    }
-    
-    .json-data {
-        margin-top: 1rem;
-        max-height: 400px;
-        overflow-y: auto;
-    }
-    
-    .json-data pre {
-        background: #1e293b;
-        color: #e2e8f0;
-        border-radius: 8px;
-        padding: 1.5rem;
-        font-size: 0.85rem;
-        line-height: 1.5;
-        overflow-x: auto;
-        margin: 0;
-    }
-    
-    .json-data code {
-        color: inherit;
-        background: transparent;
-    }
-    
-    /* Responsive enhancements */
-    @media (max-width: 768px) {
-        .fields-grid {
-            grid-template-columns: 1fr;
-        }
-        
-        .summary-stats {
-            flex-direction: column;
-            gap: 0.75rem;
-        }
-        
-        .result-header {
-            flex-direction: column;
-            align-items: flex-start;
-            gap: 0.5rem;
-        }
-        
-        .enhanced-message {
-            max-width: 98%;
-        }
-        
-        .json-data pre {
-            padding: 1rem;
-            font-size: 0.8rem;
+        .input-area {
+            padding: 16px 12px;
         }
     }
 </style>
 
-<div class="chat-container">
-    <div class="chat-header">
-        <h1 class="chat-title">Property Chat Assistant</h1>
-        <p class="text-muted">Ask questions about properties in natural language</p>
-    </div>
-    
-    <div class="session-info" id="session-info">
-        <div>
-            <strong>Session:</strong> <span id="session-id">Initializing...</span>
-        </div>
-        <div class="session-badge">Active</div>
-    </div>
-    
-    <div class="chat-messages" id="chat-messages">
-        <div class="welcome-message" id="welcome-message">
-            <div class="welcome-icon">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
-                </svg>
-            </div>
-            <h4>Welcome to Property Chat!</h4>
-            <p>I'm here to help you find properties. Ask me anything about real estate, property features, locations, or pricing.</p>
+<div class="chat-layout">
+    <!-- Sidebar -->
+    <div class="sidebar">
+        <button class="new-chat-btn" onclick="clearChat()">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"></path>
+            </svg>
+            New Chat
+        </button>
+        
+        <div class="sidebar-header">Django RAG Assistant</div>
+        <div style="font-size: 12px; color: var(--text-muted); line-height: 1.4;">
+            Ask questions about properties, get detailed information and comparisons.
         </div>
     </div>
     
-    <div class="chat-suggestions" id="chat-suggestions">
-        <div class="suggestion-bubble" onclick="sendSuggestion('Find 2 bedroom apartments under $2000')">Find 2BR under $2000</div>
-        <div class="suggestion-bubble" onclick="sendSuggestion('What amenities are available?')">Available amenities</div>
-        <div class="suggestion-bubble" onclick="sendSuggestion('Show me pet-friendly properties')">Pet-friendly options</div>
-        <div class="suggestion-bubble" onclick="sendSuggestion('Properties near the beach')">Beach properties</div>
-    </div>
-    
-    <form id="chat-form">
-        <div class="chat-input-container">
-            <textarea 
-                id="chat-input" 
-                class="chat-input" 
-                placeholder="Ask me about properties..."
-                rows="1"
-                autocomplete="off"
-            ></textarea>
-            <div class="chat-actions">
-                <button type="button" class="action-btn" onclick="clearChat()" title="Clear Chat">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <polyline points="3 6 5 6 21 6"></polyline>
-                        <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
-                    </svg>
-                </button>
-                <button type="submit" class="chat-send-btn" id="send-btn">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <line x1="22" y1="2" x2="11" y2="13"></line>
-                        <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
-                    </svg>
-                </button>
+    <!-- Main conversation area -->
+    <div class="conversation-area">
+        <!-- Chat header -->
+        <div class="chat-header">
+            <h1 class="chat-title">Property Assistant</h1>
+        </div>
+        
+        <!-- Messages container -->
+        <div class="messages-container" id="messages-container">
+            <div class="messages-wrapper">
+                <div class="welcome-message" id="welcome-message">
+                    <div class="welcome-title">How can I help you today?</div>
+                    <div class="welcome-subtitle">Ask me anything about properties, locations, pricing, or amenities.</div>
+                    
+                    <div class="suggestion-grid">
+                        <div class="suggestion-card" onclick="sendSuggestion('Find 2 bedroom apartments under $2000')">
+                            <div class="suggestion-title">Find Apartments</div>
+                            <div class="suggestion-desc">Search for 2BR under $2000</div>
+                        </div>
+                        <div class="suggestion-card" onclick="sendSuggestion('What amenities are available?')">
+                            <div class="suggestion-title">Explore Amenities</div>
+                            <div class="suggestion-desc">Browse available features</div>
+                        </div>
+                        <div class="suggestion-card" onclick="sendSuggestion('Show me pet-friendly properties')">
+                            <div class="suggestion-title">Pet-Friendly</div>
+                            <div class="suggestion-desc">Properties that allow pets</div>
+                        </div>
+                        <div class="suggestion-card" onclick="sendSuggestion('Properties near the beach')">
+                            <div class="suggestion-title">Beach Properties</div>
+                            <div class="suggestion-desc">Coastal and waterfront homes</div>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
-    </form>
+        
+        <!-- Input area -->
+        <div class="input-area">
+            <div class="input-wrapper">
+                <form id="chat-form">
+                    <div class="input-container">
+                        <textarea 
+                            id="chat-input" 
+                            class="chat-input" 
+                            placeholder="Message Property Assistant..."
+                            rows="1"
+                            autocomplete="off"
+                        ></textarea>
+                        <button type="submit" class="send-button" id="send-btn">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <line x1="22" y1="2" x2="11" y2="13"></line>
+                                <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+                            </svg>
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
 </div>
 
 {% endblock %}
 
 {% block extra_js %}
 <script>
-    let sessionId = null;
+    let sessionId = 'session_' + Date.now();
     let messageCount = 0;
-    const messagesContainer = document.getElementById('chat-messages');
+    let conversationContext = {
+        lastQuery: '',
+        lastResults: [],
+        messageHistory: [],
+        currentTopics: []
+    };
+    const messagesWrapper = document.querySelector('.messages-wrapper');
+    const messagesContainer = document.getElementById('messages-container');
     const chatInput = document.getElementById('chat-input');
     const sendBtn = document.getElementById('send-btn');
     const welcomeMessage = document.getElementById('welcome-message');
-    const suggestions = document.getElementById('chat-suggestions');
-    
-    // CSRF token helper function
-    function getCookie(name) {
-        let cookieValue = null;
-        if (document.cookie && document.cookie !== '') {
-            const cookies = document.cookie.split(';');
-            for (let i = 0; i < cookies.length; i++) {
-                const cookie = cookies[i].trim();
-                if (cookie.substring(0, name.length + 1) === (name + '=')) {
-                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
-                    break;
-                }
-            }
-        }
-        return cookieValue;
-    }
     
     document.addEventListener('DOMContentLoaded', () => {
         initializeChat();
         setupEventListeners();
-        
-        // Auto-resize textarea
         chatInput.addEventListener('input', autoResizeTextarea);
     });
     
     function initializeChat() {
-        // Generate session ID
         sessionId = 'chat_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
-        document.getElementById('session-id').textContent = sessionId;
-        
-        // Focus on input
         setTimeout(() => chatInput.focus(), 500);
-        
-        // Add welcome message animation
-        setTimeout(() => {
-            welcomeMessage.style.opacity = '1';
-            welcomeMessage.style.transform = 'translateY(0)';
-        }, 300);
     }
     
     function setupEventListeners() {
-        // Form submission
         document.getElementById('chat-form').addEventListener('submit', handleChatSubmit);
         
-        // Enter key handling
         chatInput.addEventListener('keydown', (e) => {
             if (e.key === 'Enter' && !e.shiftKey) {
                 e.preventDefault();
                 handleChatSubmit(e);
             }
         });
-        
-        // Auto-scroll on message container resize
-        const resizeObserver = new ResizeObserver(() => scrollToBottom());
-        resizeObserver.observe(messagesContainer);
     }
     
     function handleChatSubmit(e) {
         e.preventDefault();
-        
         const message = chatInput.value.trim();
         if (!message) return;
-        
         sendMessage(message);
     }
     
     function sendMessage(message) {
-        // Hide welcome message and suggestions on first message
         if (messageCount === 0) {
             welcomeMessage.style.display = 'none';
-            suggestions.style.display = 'none';
         }
         
-        // Add user message to chat
         addMessage(message, 'user');
-        
-        // Clear input
         chatInput.value = '';
         autoResizeTextarea();
-        
-        // Show typing indicator
         showTypingIndicator();
-        
-        // Disable send button
         sendBtn.disabled = true;
         
-        // Send to server
         fetch('/ajax/chat/', {
             method: 'POST',
             headers: {
@@ -759,7 +780,12 @@
             },
             body: JSON.stringify({
                 message: message,
-                session_id: sessionId
+                session_id: sessionId,
+                context: {
+                    last_query: conversationContext.lastQuery,
+                    message_history: conversationContext.messageHistory.slice(-5),
+                    current_topics: conversationContext.currentTopics
+                }
             })
         })
         .then(response => {
@@ -769,230 +795,326 @@
             return response.json();
         })
         .then(data => {
+            // Console logging: Show response data before frontend rendering
+            console.log('=== RAG CHATBOT UI OUTPUT (Before Frontend Rendering) ===');
+            console.log('Query:', messageInput.value);
+            console.log('Full Response Data:', JSON.stringify(data, null, 2));
+            console.log('Response Text:', data.response);
+            console.log('Results:', data.results);
+            console.log('Metadata:', data.metadata);
+            console.log('Currency Conversions:', data.metadata?.currency_conversions);
+            console.log('=== End UI Output Log ===');
+            
             hideTypingIndicator();
             sendBtn.disabled = false;
             
-            console.log('Chat response received:', data);
-            
             if (data.success) {
+                // Update conversation context
+                conversationContext.lastQuery = message;
+                conversationContext.messageHistory.push({
+                    user: message,
+                    assistant: data.response,
+                    timestamp: Date.now()
+                });
+                if (data.results) {
+                    conversationContext.lastResults = data.results;
+                    // Extract topics from results
+                    const topics = data.results.map(r => r.mandatory_fields?.property_type || r.mandatory_fields?.room_type).filter(Boolean);
+                    conversationContext.currentTopics = [...new Set([...conversationContext.currentTopics, ...topics])].slice(-10);
+                }
+                
+                // Extract currency information if available
+                if (data.currency_info) {
+                    window.currentCurrencyInfo = data.currency_info;
+                } else if (data.metadata?.currency_info) {
+                    window.currentCurrencyInfo = data.metadata.currency_info;
+                } else {
+                    // Check if any result has currency metadata
+                    const currencyFromResults = data.results?.find(r => r.currency_info)?.currency_info;
+                    if (currencyFromResults) {
+                        window.currentCurrencyInfo = currencyFromResults;
+                    }
+                }
+                
+                // Extract currency conversions from results and set up currency selector
+                window.currentCurrencyConversions = {};
+                if (data.results && data.results.length > 0) {
+                    data.results.forEach((result, index) => {
+                        if (result.currency_conversions) {
+                            window.currentCurrencyConversions[index] = result.currency_conversions;
+                        }
+                    });
+                    
+                    // Set default currency from conversions if available
+                    const firstResult = data.results[0];
+                    if (firstResult.currency_conversions && Object.keys(firstResult.currency_conversions).length > 0) {
+                        if (!window.currentCurrencyInfo) {
+                            window.currentCurrencyInfo = {
+                                target_currency: 'USD',
+                                converted: true
+                            };
+                        }
+                        // Set up available currencies
+                        window.availableCurrencies = Object.keys(firstResult.currency_conversions);
+                    }
+                }
+                
+                // Debug log for currency info
+                console.log('Currency info extracted:', window.currentCurrencyInfo);
+                console.log('Currency conversions available:', window.currentCurrencyConversions);
+                console.log('Response data:', data);
+                
                 addEnhancedMessage(data.response, 'assistant', {
                     executionTime: data.execution_time,
                     queryId: data.query_id,
                     timestamp: data.timestamp,
                     results: data.results,
-                    numResults: data.num_results,
-                    maxScore: data.max_similarity_score,
-                    avgScore: data.avg_similarity_score
+                    num_results: data.num_results,
+                    max_similarity_score: data.max_similarity_score,
+                    avg_similarity_score: data.avg_similarity_score
                 });
             } else {
-                addMessage('Sorry, I encountered an error processing your request. Please try again.', 'assistant', {
-                    error: true
-                });
-                console.error('Chat error:', data.error);
+                // Handle error responses with better messaging
+                const errorMsg = data.error || 'Sorry, I encountered an error processing your request. Please try again.';
+                if (data.status === 'initializing') {
+                    addMessage(`${errorMsg} <button onclick="sendMessage()" style="margin-left: 10px; padding: 5px 10px; background: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer;">Retry</button>`, 'assistant');
+                } else {
+                    addMessage(errorMsg, 'assistant');
+                }
             }
         })
         .catch(error => {
             hideTypingIndicator();
             sendBtn.disabled = false;
             console.error('Chat request failed:', error);
-            console.error('Request details:', {
-                url: '/ajax/chat/',
-                message: message,
-                sessionId: sessionId,
-                csrfToken: getCookie('csrftoken')
-            });
-            addMessage('Sorry, I\'m having trouble connecting. Please check your connection and try again.', 'assistant', {
-                error: true
-            });
+            
+            // Try to get more specific error info from the response
+            if (error.response) {
+                error.response.json().then(data => {
+                    if (data.status === 'initializing') {
+                        addMessage(`${data.error} <button onclick="sendMessage()" style="margin-left: 10px; padding: 5px 10px; background: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer;">Retry</button>`, 'assistant');
+                    } else {
+                        addMessage(data.error || 'Sorry, I encountered an error processing your request. Please try again.', 'assistant');
+                    }
+                }).catch(() => {
+                    addMessage('Sorry, I\'m having trouble connecting. Please check your connection and try again.', 'assistant');
+                });
+            } else {
+                addMessage('Sorry, I\'m having trouble connecting. Please check your connection and try again.', 'assistant');
+            }
         });
+    }
+    
+    function addMessage(content, sender) {
+        const messageDiv = document.createElement('div');
+        messageDiv.className = `message ${sender}`;
+        
+        messageDiv.innerHTML = `
+            <div class="message-header">
+                <div class="message-avatar">
+                    ${sender === 'user' ? 'U' : 'AI'}
+                </div>
+                <div class="message-author">
+                    ${sender === 'user' ? 'You' : 'Assistant'}
+                </div>
+            </div>
+            <div class="message-content">${content}</div>
+        `;
+        
+        messagesWrapper.appendChild(messageDiv);
+        messageCount++;
+        scrollToBottom();
     }
     
     function addEnhancedMessage(content, sender, metadata = {}) {
         const messageDiv = document.createElement('div');
-        messageDiv.className = `message ${sender} enhanced-message`;
+        messageDiv.className = `message ${sender}`;
         
-        const avatarDiv = document.createElement('div');
-        avatarDiv.className = 'message-avatar';
-        
-        if (sender === 'user') {
-            avatarDiv.innerHTML = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>';
-        } else {
-            avatarDiv.innerHTML = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"></circle><path d="M12 1v6M12 17v6M4.22 4.22l4.24 4.24M15.54 15.54l4.24 4.24M1 12h6M17 12h6M4.22 19.78l4.24-4.24M15.54 8.46l4.24-4.24"></path></svg>';
-        }
-        
-        const contentDiv = document.createElement('div');
-        contentDiv.className = 'message-content enhanced-content';
-        
-        // Create enhanced response content
         let enhancedContent = `<div class="response-text">${content}</div>`;
         
-        // Add results summary
-        if (metadata.numResults) {
+        if (metadata.num_results || metadata.numResults) {
+            const numResults = metadata.num_results || metadata.numResults;
+            const maxScore = metadata.max_similarity_score || metadata.maxScore || 0;
+            const executionTime = metadata.execution_time || metadata.executionTime || 0;
+            
             enhancedContent += `
                 <div class="response-summary">
                     <div class="summary-stats">
-                        <span class="stat-item"><strong>${metadata.numResults}</strong> results found</span>
-                        <span class="stat-item"><strong>${metadata.maxScore ? (metadata.maxScore * 100).toFixed(1) : 0}%</strong> max relevance</span>
-                        <span class="stat-item"><strong>${metadata.executionTime ? metadata.executionTime.toFixed(2) : 0}s</strong> processing time</span>
+                        <span class="stat-item"><strong>${numResults}</strong> results found</span>
+                        <span class="stat-item"><strong>${(maxScore * 100).toFixed(1)}%</strong> max relevance</span>
+                        <span class="stat-item"><strong>${executionTime.toFixed(2)}s</strong> processing time</span>
                     </div>
                 </div>
             `;
         }
         
-        // Add detailed results if available
         if (metadata.results && metadata.results.length > 0) {
             enhancedContent += '<div class="detailed-results">';
-            enhancedContent += '<div class="results-header"><h4>Detailed Results</h4></div>';
             
             metadata.results.forEach((result, index) => {
-                if (index < 3) { // Show first 3 results in detail
+                if (index < 3) {
                     enhancedContent += `
                         <div class="result-item" data-result-index="${index}">
-                            <div class="result-header">
-                                <h5>Property ${index + 1} (${(result.score * 100).toFixed(1)}% match)</h5>
-                                <button class="toggle-btn" onclick="toggleResultDetails(${index})">▼</button>
-                            </div>
-                            
-                            <!-- Query Relevant Fields -->
-                            <div class="query-relevant-fields">
-                                <h6>Key Information</h6>
-                                <div class="fields-grid">
+                            <h6>Property ${index + 1}</h6>
+                            <div class="fields-grid">
                     `;
                     
-                    if (result.query_relevant_fields) {
-                        Object.entries(result.query_relevant_fields).forEach(([field, value]) => {
-                            enhancedContent += `
-                                <div class="field-item">
-                                    <span class="field-name">${field.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}:</span>
-                                    <span class="field-value">${value}</span>
-                                </div>
-                            `;
+                    // Enhanced field extraction with comprehensive data scanning
+                    const mandatoryFields = result.mandatory_fields || {};
+                    const sourceData = result.source_data || result.document || result.source_json || {};
+                    const allFields = {...mandatoryFields};
+                    
+                    // If mandatory fields don't have price or location, extract from full source data
+                    if (!allFields.price || allFields.price === 'Price information not found') {
+                        const extractedPrice = extractPriceFromSource(sourceData);
+                        if (extractedPrice) {
+                            allFields.price = extractedPrice;
+                        }
+                    }
+                    
+                    if (!allFields.location) {
+                        const extractedLocation = extractLocationFromSource(sourceData);
+                        if (extractedLocation) {
+                            allFields.location = extractedLocation;
+                        }
+                    }
+                    
+                    // Extract other essential fields if mandatory_fields is empty
+                    if (Object.keys(mandatoryFields).length === 0 && Object.keys(sourceData).length > 0) {
+                        const essentialFields = ['name', 'property_type', 'room_type', 'bedrooms', 'bathrooms', 'accommodates'];
+                        essentialFields.forEach(field => {
+                            if (sourceData[field] !== undefined && sourceData[field] !== null && sourceData[field] !== '') {
+                                const displayName = field.replace(/_/g, ' ');
+                                allFields[displayName] = sourceData[field];
+                            }
                         });
                     }
                     
+                    // Display all available fields with improved formatting
+                    Object.entries(allFields).forEach(([key, value]) => {
+                        if (value !== undefined && value !== null && value !== '' && value !== 'N/A' && value !== 'Not specified') {
+                            enhancedContent += `
+                                <div class="field-item">
+                                    <div class="field-name">${key.replace(/_/g, ' ')}</div>
+                                    <div class="field-value">${key.toLowerCase().includes('price') && window.currentCurrencyConversions && window.currentCurrencyConversions[window.selectedCurrency] ? window.currentCurrencyConversions[window.selectedCurrency].formatted : value}</div>
+                                </div>
+                            `;
+                        }
+                    });
+                    
+                    enhancedContent += '</div>';
+                    
+                    // Enhanced AI Summary generation
+                    const dataForSummary = sourceData && Object.keys(sourceData).length > 0 ? sourceData : result;
+                    // Set the current result index for currency conversion
+                    window.currentResultIndex = index;
+                    const aiSummary = result.ai_summary || generateAISummary(dataForSummary, index);
+                    
+                    if (aiSummary && aiSummary !== 'No additional data available for this property.') {
+                        enhancedContent += `
+                            <div class="ai-summary">
+                                <h6>🤖 AI Summary</h6>
+                                <div class="summary-content">
+                                    ${aiSummary}
+                                </div>
+                            </div>
+                        `;
+                    }
+                    
+                    // Enhanced JSON display with better error handling
+                    const jsonData = sourceData && Object.keys(sourceData).length > 0 ? sourceData : result;
+                    let jsonDisplay = '{}';
+                    
+                    try {
+                        if (jsonData && typeof jsonData === 'object') {
+                            jsonDisplay = JSON.stringify(jsonData, null, 2);
+                            // If still minimal, try to extract more comprehensive data
+                            if (jsonDisplay === '{}' || jsonDisplay.length < 50) {
+                                const allResultData = {...result};
+                                delete allResultData.id;
+                                delete allResultData.score;
+                                jsonDisplay = JSON.stringify(allResultData, null, 2);
+                            }
+                        }
+                    } catch (e) {
+                        jsonDisplay = JSON.stringify({error: 'Could not display data', data: String(jsonData)}, null, 2);
+                    }
+                    
                     enhancedContent += `
-                                </div>
-                            </div>
-                            
-                            <!-- AI Summary -->
-                            <div class="ai-summary-section">
-                                <h6>AI Analysis</h6>
-                                <div class="ai-summary">${result.ai_summary || 'No summary available'}</div>
-                            </div>
-                            
-                            <!-- Full JSON Data (Collapsible) -->
-                            <div class="json-data-section">
-                                <button class="json-toggle" onclick="toggleJsonData(${index})">
-                                    📄 View Complete Source Data
-                                </button>
-                                <div class="json-data" id="json-data-${index}" style="display: none;">
-                                    <pre><code>${JSON.stringify(result.source_json, null, 2)}</code></pre>
-                                </div>
-                            </div>
+                        <button class="json-toggle" onclick="toggleJsonData(${index})">
+                            📊 View Complete Source Data
+                        </button>
+                        <div class="json-data" id="json-data-${index}" style="display: none;">
+                            <pre><code>${jsonDisplay}</code></pre>
                         </div>
                     `;
+                    
+                    enhancedContent += '</div>';
                 }
             });
             
-            enhancedContent += '</div>'; // Close detailed-results
+            // Add comparison button if multiple results
+            if (metadata.results.length > 1) {
+                // Add currency selector if currency conversions are available
+                if (window.availableCurrencies && window.availableCurrencies.length > 1) {
+                    enhancedContent += `
+                    <div class="currency-selector-container" style="margin: 10px 0; padding: 10px; background: #f8f9fa; border-radius: 8px;">
+                        <label for="currency-selector" style="font-weight: 600; margin-right: 10px;">💱 View prices in:</label>
+                        <select id="currency-selector" onchange="updateCurrency(this.value)" style="padding: 5px 10px; border: 1px solid #ddd; border-radius: 4px;">
+                            ${window.availableCurrencies.map(currency => 
+                                `<option value="${currency}" ${currency === (window.currentCurrencyInfo?.target_currency || 'USD') ? 'selected' : ''}>${currency}</option>`
+                            ).join('')}
+                        </select>
+                    </div>
+                    `;
+                }
+                
+                enhancedContent += `
+                    <button class="comparison-toggle" onclick="toggleComparison()">
+                        📊 Compare Properties in Table View
+                    </button>
+                    <div class="comparison-table-container" id="comparison-table" style="display: none;">
+                        ${generateComparisonTable(metadata.results.slice(0, 4))}
+                    </div>
+                `;
+            }
+            
+            enhancedContent += '</div>';
         }
         
-        contentDiv.innerHTML = enhancedContent;
+        messageDiv.innerHTML = `
+            <div class="message-header">
+                <div class="message-avatar">AI</div>
+                <div class="message-author">Assistant</div>
+            </div>
+            <div class="message-content enhanced-content">${enhancedContent}</div>
+        `;
         
-        // Add metadata
-        if (metadata.executionTime || metadata.queryId || metadata.timestamp) {
-            const metaDiv = document.createElement('div');
-            metaDiv.className = 'message-meta';
-            
-            let metaContent = '';
-            if (metadata.executionTime) {
-                metaContent += `<span>⚡ ${metadata.executionTime.toFixed(2)}s</span>`;
-            }
-            if (metadata.queryId) {
-                metaContent += `<span>ID: ${metadata.queryId}</span>`;
-            }
-            if (metadata.timestamp) {
-                const time = new Date(metadata.timestamp).toLocaleTimeString();
-                metaContent += `<span>${time}</span>`;
-            }
-            
-            metaDiv.innerHTML = `<div>${metaContent}</div>`;
-            contentDiv.appendChild(metaDiv);
-        }
-        
-        messageDiv.appendChild(avatarDiv);
-        messageDiv.appendChild(contentDiv);
-        
-        messagesContainer.appendChild(messageDiv);
+        messagesWrapper.appendChild(messageDiv);
         messageCount++;
-        
-        scrollToBottom();
-    }
-    
-        function addMessage(content, sender, metadata = {}) {
-        const messageDiv = document.createElement('div');
-        messageDiv.className = `message ${sender}`;
-        
-        const avatarDiv = document.createElement('div');
-        avatarDiv.className = 'message-avatar';
-        
-        if (sender === 'user') {
-            avatarDiv.innerHTML = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>';
-        } else {
-            avatarDiv.innerHTML = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"></circle><path d="M12 1v6M12 17v6M4.22 4.22l4.24 4.24M15.54 15.54l4.24 4.24M1 12h6M17 12h6M4.22 19.78l4.24-4.24M15.54 8.46l4.24-4.24"></path></svg>';
-        }
-        
-        const contentDiv = document.createElement('div');
-        contentDiv.className = 'message-content';
-        contentDiv.innerHTML = content;
-        
-        // Add metadata if available
-        if (metadata.executionTime || metadata.queryId || metadata.timestamp) {
-            const metaDiv = document.createElement('div');
-            metaDiv.className = 'message-meta';
-            
-            let metaContent = '';
-            if (metadata.executionTime) {
-                metaContent += `<span>⚡ ${metadata.executionTime.toFixed(2)}s</span>`;
-            }
-            if (metadata.queryId) {
-                metaContent += `<span>ID: ${metadata.queryId}</span>`;
-            }
-            if (metadata.timestamp) {
-                const time = new Date(metadata.timestamp).toLocaleTimeString();
-                metaContent += `<span>${time}</span>`;
-            }
-            
-            metaDiv.innerHTML = `<div>${metaContent}</div>`;
-            contentDiv.appendChild(metaDiv);
-        }
-        
-        messageDiv.appendChild(avatarDiv);
-        messageDiv.appendChild(contentDiv);
-        
-        messagesContainer.appendChild(messageDiv);
-        messageCount++;
-        
         scrollToBottom();
     }
     
     function showTypingIndicator() {
         const typingDiv = document.createElement('div');
-        typingDiv.className = 'typing-indicator';
+        typingDiv.className = 'message assistant';
         typingDiv.id = 'typing-indicator';
         
-        const avatarDiv = document.createElement('div');
-        avatarDiv.className = 'message-avatar';
-        avatarDiv.innerHTML = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"></circle><path d="M12 1v6M12 17v6M4.22 4.22l4.24 4.24M15.54 15.54l4.24 4.24M1 12h6M17 12h6M4.22 19.78l4.24-4.24M15.54 8.46l4.24-4.24"></path></svg>';
+        typingDiv.innerHTML = `
+            <div class="message-header">
+                <div class="message-avatar">AI</div>
+                <div class="message-author">Assistant</div>
+            </div>
+            <div class="typing-indicator">
+                <div class="typing-dots">
+                    <div class="typing-dot"></div>
+                    <div class="typing-dot"></div>
+                    <div class="typing-dot"></div>
+                </div>
+            </div>
+        `;
         
-        const dotsDiv = document.createElement('div');
-        dotsDiv.className = 'typing-dots';
-        dotsDiv.innerHTML = '<div class="typing-dot"></div><div class="typing-dot"></div><div class="typing-dot"></div>';
-        
-        typingDiv.appendChild(avatarDiv);
-        typingDiv.appendChild(dotsDiv);
-        
-        messagesContainer.appendChild(typingDiv);
+        messagesWrapper.appendChild(typingDiv);
         scrollToBottom();
     }
     
@@ -1009,53 +1131,162 @@
     
     function autoResizeTextarea() {
         chatInput.style.height = 'auto';
-        chatInput.style.height = Math.min(chatInput.scrollHeight, 120) + 'px';
+        chatInput.style.height = Math.min(chatInput.scrollHeight, 200) + 'px';
+    }
+    
+    function clearChat() {
+        messagesWrapper.innerHTML = '';
+        welcomeMessage.style.display = 'block';
+        messagesWrapper.appendChild(welcomeMessage);
+        messageCount = 0;
+        sessionId = 'chat_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
     }
     
     function sendSuggestion(message) {
         chatInput.value = message;
-        chatInput.focus();
         sendMessage(message);
     }
     
-    function clearChat() {
-        if (confirm('Are you sure you want to clear the chat? This will start a new session.')) {
-            messagesContainer.innerHTML = '';
-            messageCount = 0;
-            
-            // Reset welcome message
-            messagesContainer.appendChild(welcomeMessage);
-            welcomeMessage.style.display = 'flex';
-            suggestions.style.display = 'flex';
-            
-            // Generate new session
-            initializeChat();
+    function generateAISummary(sourceData, resultIndex = 0) {
+        // Set the result index for currency conversion access
+        window.currentResultIndex = resultIndex;
+        if (!sourceData || Object.keys(sourceData).length === 0) {
+            return 'Property information is being processed. Please check the complete source data below for all available details.';
         }
-    }
-    
-    // Handle page unload
-    window.addEventListener('beforeunload', () => {
-        if (messageCount > 0) {
-            // Could save session state here
-            console.log('Chat session ending:', sessionId);
-        }
-    });
-    
-    // Toggle functions for enhanced UI
-    function toggleResultDetails(index) {
-        const resultItem = document.querySelector(`[data-result-index="${index}"]`);
-        const toggleBtn = resultItem.querySelector('.toggle-btn');
-        const details = resultItem.querySelectorAll('.query-relevant-fields, .ai-summary-section, .json-data-section');
         
-        details.forEach(detail => {
-            if (detail.style.display === 'none') {
-                detail.style.display = 'block';
-                toggleBtn.textContent = '▲';
-            } else {
-                detail.style.display = 'none';
-                toggleBtn.textContent = '▼';
+        let summary = [];
+        
+        // Enhanced pricing information with primary price and secondary details
+        const pricing = [];
+        let primaryPrice = null;
+        const secondaryPrices = [];
+        const pricingFields = ['price', 'cleaning_fee', 'security_deposit', 'weekly_price', 'monthly_price', 'nightly_price', 'daily_price', 'base_price'];
+        
+        pricingFields.forEach(field => {
+            if (sourceData[field] !== undefined && sourceData[field] !== null && sourceData[field] !== '') {
+                let value = sourceData[field];
+                if (typeof value === 'string') {
+                    value = value.replace(/[^\d.]/g, '');
+                }
+                if (value && !isNaN(value) && parseFloat(value) > 0) {
+                    const currency = window.currentCurrencyInfo?.target_currency || 'USD';
+                    let formattedValue;
+                    
+                    // Check if we have currency conversion data for this result
+                    const resultIndex = window.currentResultIndex || 0;
+                    const conversions = window.currentCurrencyConversions?.[resultIndex];
+                    
+                    if (conversions && conversions[currency] && field === 'price') {
+                        formattedValue = conversions[currency].formatted || 
+                                       `${conversions[currency].symbol}${conversions[currency].amount.toFixed(0)} per night`;
+                    } else {
+                        const symbol = getCurrencySymbol(currency);
+                        formattedValue = formatPriceWithCurrency(parseFloat(value), currency, symbol);
+                    }
+                    
+                    if (field === 'price') {
+                        primaryPrice = formattedValue;
+                    } else {
+                        const shortPrice = formattedValue.replace(' per night', '');
+                        secondaryPrices.push(`${field.replace(/_/g, ' ')}: ${shortPrice}`);
+                    }
+                }
             }
         });
+        
+        if (primaryPrice) {
+            pricing.push(primaryPrice);
+            if (secondaryPrices.length > 0) {
+                pricing.push(`(${secondaryPrices.slice(0, 2).join(', ')}${secondaryPrices.length > 2 ? ', +more' : ''})`);
+            }
+            summary.push(`Pricing: ${pricing.join(' ')}`);
+        } else if (secondaryPrices.length > 0) {
+            summary.push(`Pricing: ${secondaryPrices.slice(0, 2).join(', ')}`);
+        }
+        
+        // Property specifications with enhanced details
+        const details = [];
+        if (sourceData.property_type) details.push(`🏠 ${sourceData.property_type}`);
+        if (sourceData.room_type) details.push(`🛏️ ${sourceData.room_type}`);
+        if (sourceData.accommodates) details.push(`👥 Accommodates ${sourceData.accommodates} guests`);
+        if (sourceData.bedrooms) details.push(`🚪 ${sourceData.bedrooms} bedroom(s)`);
+        if (sourceData.bathrooms) details.push(`🛁 ${sourceData.bathrooms} bathroom(s)`);
+        if (sourceData.beds) details.push(`🛌 ${sourceData.beds} bed(s)`);
+        
+        if (details.length > 0) {
+            summary.push(`🏡 Property Details: ${details.join(', ')}`);
+        }
+        
+        // Enhanced location information
+        const locationParts = [];
+        if (sourceData.neighbourhood_cleansed) locationParts.push(sourceData.neighbourhood_cleansed);
+        if (sourceData.city && sourceData.city !== sourceData.neighbourhood_cleansed) locationParts.push(sourceData.city);
+        if (sourceData.country) locationParts.push(sourceData.country);
+        
+        if (locationParts.length > 0) {
+            summary.push(`📍 Location: ${locationParts.join(', ')}`);
+        }
+        
+        // Review and rating information
+        if (sourceData.review_scores_rating || sourceData.number_of_reviews) {
+            const reviews = [];
+            if (sourceData.review_scores_rating) {
+                const rating = parseFloat(sourceData.review_scores_rating);
+                reviews.push(`⭐ ${rating}/100 overall rating`);
+            }
+            if (sourceData.number_of_reviews) {
+                const count = parseInt(sourceData.number_of_reviews);
+                reviews.push(`💬 ${count} review${count !== 1 ? 's' : ''}`);
+            }
+            summary.push(`📝 Reviews: ${reviews.join(', ')}`);
+        }
+        
+        // Host information with enhanced details
+        if (sourceData.host_name) {
+            let hostInfo = `👤 Host: ${sourceData.host_name}`;
+            if (sourceData.host_is_superhost === 't' || sourceData.host_is_superhost === true) {
+                hostInfo += ' ⭐ (Superhost)';
+            }
+            if (sourceData.host_response_time) {
+                hostInfo += ` | Response time: ${sourceData.host_response_time.replace(/_/g, ' ')}`;
+            }
+            summary.push(hostInfo);
+        }
+        
+        // Amenities with smart truncation
+        if (sourceData.amenities) {
+            let amenities = sourceData.amenities;
+            if (typeof amenities === 'string') {
+                try {
+                    amenities = JSON.parse(amenities);
+                } catch (e) {
+                    amenities = amenities.split(',').map(a => a.trim());
+                }
+            }
+            
+            if (Array.isArray(amenities) && amenities.length > 0) {
+                const topAmenities = amenities.slice(0, 4).join(', ');
+                summary.push(`🎯 Key amenities: ${topAmenities}${amenities.length > 4 ? ` (+ ${amenities.length - 4} more)` : ''}`);
+            }
+        }
+        
+        // Booking policies and requirements
+        const policies = [];
+        if (sourceData.instant_bookable === 't' || sourceData.instant_bookable === true) {
+            policies.push('⚡ Instant booking available');
+        }
+        if (sourceData.cancellation_policy) {
+            policies.push(`📋 ${sourceData.cancellation_policy.replace(/_/g, ' ')} cancellation`);
+        }
+        if (sourceData.minimum_nights) {
+            policies.push(`🗓️ Min ${sourceData.minimum_nights} night(s)`);
+        }
+        
+        if (policies.length > 0) {
+            summary.push(policies.join(', '));
+        }
+        
+        return summary.length > 0 ? summary.join('. ') + '.' : 'This property has comprehensive information available. Please view the complete source data below for all details including descriptions, amenities, and policies.';
     }
     
     function toggleJsonData(index) {
@@ -1064,25 +1295,318 @@
         
         if (jsonData.style.display === 'none') {
             jsonData.style.display = 'block';
-            toggleBtn.textContent = '📄 Hide Source Data';
+            toggleBtn.innerHTML = '📊 Hide Complete Source Data';
         } else {
             jsonData.style.display = 'none';
-            toggleBtn.textContent = '📄 View Complete Source Data';
+            toggleBtn.innerHTML = '📊 View Complete Source Data';
         }
     }
     
-        // Add keyboard shortcuts
-    document.addEventListener('keydown', (e) => {
-        // Ctrl/Cmd + K to clear chat
-        if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
-            e.preventDefault();
-            clearChat();
+    function toggleComparison() {
+        const comparisonTable = document.getElementById('comparison-table');
+        const toggleBtn = document.querySelector('.comparison-toggle');
+        
+        if (comparisonTable.style.display === 'none') {
+            comparisonTable.style.display = 'block';
+            toggleBtn.innerHTML = '📊 Hide Comparison Table';
+        } else {
+            comparisonTable.style.display = 'none';
+            toggleBtn.innerHTML = '📊 Compare Properties in Table View';
+        }
+    }
+    
+    function generateComparisonTable(results) {
+        if (!results || results.length === 0) return '';
+        
+        // Store results for currency updates
+        window.lastComparisonResults = results;
+        
+        const fields = new Set();
+        results.forEach(result => {
+            // Extract fields from multiple sources
+            if (result.mandatory_fields) {
+                Object.keys(result.mandatory_fields).forEach(field => fields.add(field));
+            }
+            
+            const sourceData = result.source_data || result.document || result.source_json || {};
+            if (Object.keys(result.mandatory_fields || {}).length === 0) {
+                ['name', 'price', 'property_type', 'room_type', 'bedrooms', 'bathrooms', 'location', 'neighbourhood_cleansed', 'city'].forEach(field => {
+                    if (sourceData[field]) fields.add(field);
+                });
+            }
+        });
+        
+        let tableHTML = '<table class="comparison-table"><thead><tr><th>Property Feature</th>';
+        results.forEach((_, index) => {
+            tableHTML += `<th>Property ${index + 1}</th>`;
+        });
+        tableHTML += '</tr></thead><tbody>';
+        
+        fields.forEach(field => {
+            tableHTML += `<tr><td class="field-name" style="font-weight: 600;">${field.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}</td>`;
+            results.forEach(result => {
+                let value = result.mandatory_fields?.[field];
+                
+                // Fallback to source data if mandatory fields don't have the value
+                if (!value || value === 'N/A' || value === 'Not specified') {
+                    const sourceData = result.source_data || result.document || result.source_json || {};
+                    
+                    // Special handling for price and location fields using comprehensive extraction
+                    if (field === 'price') {
+                        value = extractPriceFromSource(sourceData) || 'Price not available';
+                    } else if (field === 'location') {
+                        value = extractLocationFromSource(sourceData) || 'Location not available';
+                    } else {
+                        value = sourceData[field];
+                    }
+                }
+                
+                // Enhanced value formatting
+                if (!value || value === null || value === undefined || value === '' || value === 'N/A' || value === 'Not specified') {
+                    value = 'N/A';
+                } else if (field === 'price' && !isNaN(value)) {
+                    // Use currency conversion data if available
+                    const currency = window.currentCurrencyInfo?.target_currency || 'USD';
+                    if (result.currency_conversions && result.currency_conversions[currency]) {
+                        value = result.currency_conversions[currency].formatted || 
+                               `${result.currency_conversions[currency].symbol}${result.currency_conversions[currency].amount.toFixed(0)} per night`;
+                    } else {
+                        const symbol = getCurrencySymbol(currency);
+                        const formattedPrice = formatPriceWithCurrency(parseFloat(value), currency, symbol);
+                        value = formattedPrice;
+                    }
+                }
+                
+                tableHTML += `<td class="property-column">${value}</td>`;
+            });
+            tableHTML += '</tr>';
+        });
+        
+        tableHTML += '</tbody></table>';
+        return tableHTML;
+    }
+    
+    function extractPriceFromSource(sourceData) {
+        if (!sourceData || typeof sourceData !== 'object') return null;
+        
+        // Extended list of price field names
+        const priceFields = [
+            'price', 'nightly_rate', 'rate', 'cost', 'daily_rate', 'listing_price',
+            'price_per_night', 'night_rate', 'base_price', 'rental_price',
+            'accommodation_price', 'stay_price', 'booking_price', 'charges',
+            'fee', 'amount', 'pricing', 'tariff', 'rent'
+        ];
+        
+        // First try exact field matches
+        for (const field of priceFields) {
+            if (sourceData[field] !== undefined && sourceData[field] !== null) {
+                // Check for currency conversion data first
+                const currency = window.currentCurrencyInfo?.target_currency || 'USD';
+                const resultIndex = window.currentResultIndex || 0;
+                const conversions = window.currentCurrencyConversions?.[resultIndex];
+                
+                if (conversions && conversions[currency] && field === 'price') {
+                    return conversions[currency].formatted || 
+                           `${conversions[currency].symbol}${conversions[currency].amount.toFixed(0)} per night`;
+                }
+                
+                const formatted = parsePrice(sourceData[field], window.currentCurrencyInfo);
+                if (formatted) return formatted;
+            }
         }
         
-        // Escape to focus input
-        if (e.key === 'Escape') {
-            chatInput.focus();
+        // Then try case-insensitive search
+        for (const [key, value] of Object.entries(sourceData)) {
+            if (value !== null && value !== undefined) {
+                const keyLower = String(key).toLowerCase();
+                if (priceFields.some(term => keyLower.includes(term))) {
+                    const formatted = parsePrice(value, window.currentCurrencyInfo);
+                    if (formatted) return formatted;
+                }
+            }
         }
-    });
+        
+        // Last resort: look for numeric values in reasonable price range
+        for (const [key, value] of Object.entries(sourceData)) {
+            if (typeof value === 'number' && value >= 10 && value <= 10000) {
+                const currency = window.currentCurrencyInfo?.target_currency || 'USD';
+                const symbol = getCurrencySymbol(currency);
+                return formatPriceWithCurrency(value, currency, symbol);
+            }
+        }
+        
+        return null;
+    }
+    
+    function parsePrice(value, currencyInfo = null) {
+        try {
+            // If the value is already formatted with currency (from backend conversion), return as-is
+            if (typeof value === 'string' && /^[A-Z]{3}\s|[¥₹€£$]/.test(value)) {
+                return value.includes('per night') ? value : `${value} per night`;
+            }
+            
+            // Get currency info from metadata or default to USD
+            const currency = currencyInfo?.target_currency || 'USD';
+            const symbol = getCurrencySymbol(currency);
+            
+            if (typeof value === 'number') {
+                return formatPriceWithCurrency(value, currency, symbol);
+            } else if (typeof value === 'string') {
+                const priceMatch = value.replace(/[^\d.]/g, '').match(/\d+\.?\d*/);
+                if (priceMatch) {
+                    const price = parseFloat(priceMatch[0]);
+                    return formatPriceWithCurrency(price, currency, symbol);
+                }
+            }
+        } catch (e) {
+            // Ignore parsing errors
+        }
+        return null;
+    }
+    
+    function formatPriceWithCurrency(price, currency, symbol) {
+        // No decimals for certain currencies
+        if (['JPY', 'KRW', 'IDR', 'VND', 'HUF'].includes(currency)) {
+            return `${symbol}${price.toFixed(0)} per night`;
+        } else {
+            return price >= 1 ? `${symbol}${price.toFixed(0)} per night` : `${symbol}${price.toFixed(2)} per night`;
+        }
+    }
+    
+    function updateCurrency(newCurrency) {
+        // Update the current currency info
+        window.currentCurrencyInfo = {
+            target_currency: newCurrency,
+            converted: true
+        };
+        
+        console.log('Currency updated to:', newCurrency);
+        
+        // Update all price displays on the page
+        updateAllPriceDisplays(newCurrency);
+    }
+    
+    function updateAllPriceDisplays(currency) {
+        // Update comparison table prices
+        const comparisonTable = document.querySelector('.comparison-table');
+        if (comparisonTable) {
+            // Regenerate the comparison table with new currency
+            const tableContainer = document.getElementById('comparison-table');
+            if (tableContainer && window.lastComparisonResults) {
+                tableContainer.innerHTML = generateComparisonTable(window.lastComparisonResults);
+            }
+        }
+        
+        // Update field cards prices
+        document.querySelectorAll('.result-item').forEach((resultDiv, index) => {
+            if (window.currentCurrencyConversions[index]) {
+                updateResultPrices(resultDiv, index, currency);
+            }
+        });
+    }
+    
+    function updateResultPrices(resultDiv, resultIndex, currency) {
+        const conversions = window.currentCurrencyConversions[resultIndex];
+        if (!conversions || !conversions[currency]) return;
+        
+        // Update price fields in the result item
+        const priceFields = resultDiv.querySelectorAll('[data-field-type="price"]');
+        priceFields.forEach(priceField => {
+            const fieldName = priceField.getAttribute('data-field-name');
+            if (conversions[currency] && fieldName === 'price') {
+                priceField.textContent = conversions[currency].formatted || `${conversions[currency].symbol}${conversions[currency].amount}`;
+            }
+        });
+    }
+    
+    function getCurrencySymbol(currency) {
+        const symbols = {
+            'USD': '$', 'EUR': 'EUR ', 'GBP': 'GBP ', 'INR': 'INR ',
+            'JPY': 'JPY ', 'CAD': 'CAD ', 'AUD': 'AUD ', 'CHF': 'CHF ',
+            'CNY': 'CNY ', 'SEK': 'SEK ', 'NOK': 'NOK ', 'DKK': 'DKK ',
+            'RUB': 'RUB ', 'BRL': 'BRL ', 'MXN': 'MXN ', 'KRW': 'KRW ',
+            'SGD': 'SGD ', 'HKD': 'HKD ', 'NZD': 'NZD ', 'ZAR': 'ZAR ',
+            'THB': 'THB ', 'MYR': 'MYR ', 'IDR': 'IDR ', 'VND': 'VND ',
+            'PHP': 'PHP ', 'TRY': 'TRY ', 'PLN': 'PLN ', 'CZK': 'CZK ', 'HUF': 'HUF '
+        };
+        return symbols[currency] || `${currency} `;
+    }
+    
+    function extractLocationFromSource(sourceData) {
+        if (!sourceData || typeof sourceData !== 'object') return null;
+        
+        const locationParts = [];
+        
+        // First pass: neighbourhood/area
+        const neighbourhoodFields = ['neighbourhood_cleansed', 'neighbourhood', 'neighborhood', 'area', 'district', 'suburb', 'zone'];
+        let neighbourhood = null;
+        for (const field of neighbourhoodFields) {
+            if (sourceData[field] && String(sourceData[field]).trim()) {
+                neighbourhood = String(sourceData[field]).trim();
+                break;
+            }
+        }
+        
+        // Second pass: city/town
+        const cityFields = ['city', 'town', 'municipality', 'locality', 'place'];
+        let city = null;
+        for (const field of cityFields) {
+            if (sourceData[field] && String(sourceData[field]).trim()) {
+                const cityVal = String(sourceData[field]).trim();
+                if (!neighbourhood || cityVal.toLowerCase() !== neighbourhood.toLowerCase()) {
+                    city = cityVal;
+                    break;
+                }
+            }
+        }
+        
+        // Third pass: region/state if we need more info
+        let region = null;
+        if (!neighbourhood && !city) {
+            const regionFields = ['region', 'state', 'province', 'county', 'administrative_area'];
+            for (const field of regionFields) {
+                if (sourceData[field] && String(sourceData[field]).trim()) {
+                    region = String(sourceData[field]).trim();
+                    break;
+                }
+            }
+        }
+        
+        // Fourth pass: scan for location-like terms
+        if (!neighbourhood && !city && !region) {
+            const locationTerms = ['location', 'address', 'place', 'area', 'district', 'zone', 'locale'];
+            for (const [key, value] of Object.entries(sourceData)) {
+                if (value && typeof value === 'string') {
+                    const keyLower = String(key).toLowerCase();
+                    const valueClean = String(value).trim();
+                    if (locationTerms.some(term => keyLower.includes(term)) && valueClean.length < 100 && valueClean.length > 2) {
+                        return valueClean;
+                    }
+                }
+            }
+        }
+        
+        // Build location string
+        if (neighbourhood) locationParts.push(neighbourhood);
+        if (city) locationParts.push(city);
+        if (region && !neighbourhood && !city) locationParts.push(region);
+        
+        return locationParts.length > 0 ? locationParts.slice(0, 3).join(', ') : null;
+    }
+    
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
 </script>
 {% endblock %}
