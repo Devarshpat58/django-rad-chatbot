@@ -43,9 +43,9 @@ class TranslationService:
                 r'\b(maison|maisons|location|vente)\b'
             ],
             'de': [
-                r'\b(wohnungen?|zimmer|finde|suche|preis)\b',
-                r'\b(mit|für|in|von|unter|über)\b',
-                r'\b(haus|häuser|miete|verkauf)\b'
+                r'\b(wohnungen?|zimmer|finde|suche|preis|günstige?|guenstige?|billige?|apartment|apartments)\b',
+                r'\b(mit|für|in|von|unter|über|dollar|euro|new\s*york|nyc)\b',
+                r'\b(haus|häuser|miete|verkauf|sie|finden)\b'
             ],
             'it': [
                 r'\b(appartamenti?|camere?|trova|cerca|prezzo)\b',
@@ -90,13 +90,24 @@ class TranslationService:
                 r'\bwohnungen?\b': 'apartments',
                 r'\bzimmer\b': 'rooms',
                 r'\bfinde\b': 'find',
+                r'\bfinden\b': 'find',
                 r'\bsuche\b': 'search',
                 r'\bhaus\b': 'house',
                 r'\bhäuser\b': 'houses',
                 r'\bmiete\b': 'rental',
                 r'\bpreis\b': 'price',
                 r'\bunter\b': 'under',
-                r'\büber\b': 'over'
+                r'\büber\b': 'over',
+                r'\bgünstige?\b': 'cheap',
+                r'\bguenstige?\b': 'cheap',  # ASCII version
+                r'\bbillige?\b': 'cheap',
+                r'\bapartment\b': 'apartment',
+                r'\bapartments\b': 'apartments',
+                r'\bdollar\b': 'dollar',
+                r'\beuro\b': 'euro',
+                r'\bnew\s*york\b': 'new york',
+                r'\bnyc\b': 'new york',
+                r'\bsie\b': ''  # Remove formal "you" as it's not needed in English
             },
             'it': {
                 r'\bappartamenti?\b': 'apartments',
@@ -270,6 +281,7 @@ class TranslationService:
     def process_query(self, query_text: str) -> Dict[str, str]:
         """
         Process a user query by detecting language and translating to English if needed
+        Enhanced to preserve geographic entities and improve location recognition
         
         Args:
             query_text: User's query text
@@ -289,14 +301,42 @@ class TranslationService:
         # Detect and translate
         translation_result = self.translate_to_english(query_text)
         
+        # Enhanced post-processing to ensure geographic entities are preserved
+        english_query = translation_result['translated_text']
+        
+        # Ensure location entities are properly formatted
+        english_query = self._enhance_location_entities(english_query)
+        
         return {
             'original_query': translation_result['original_text'],
-            'english_query': translation_result['translated_text'],
+            'english_query': english_query,
             'detected_language': translation_result['detected_language'],
             'confidence': translation_result['confidence'],
             'translation_needed': translation_result['translation_needed'],
             'translation_error': translation_result.get('translation_error')
         }
+    
+    def _enhance_location_entities(self, text: str) -> str:
+        """
+        Enhance location entity recognition and formatting
+        
+        Args:
+            text: Translated text to enhance
+            
+        Returns:
+            Enhanced text with better location formatting
+        """
+        # Normalize New York variations
+        text = re.sub(r'\bnew\s*york\s*city\b', 'New York', text, flags=re.IGNORECASE)
+        text = re.sub(r'\bnyc\b', 'New York', text, flags=re.IGNORECASE)
+        text = re.sub(r'\bnew\s*york\s*ny\b', 'New York', text, flags=re.IGNORECASE)
+        
+        # Ensure proper capitalization for major cities
+        text = re.sub(r'\bnew\s*york\b', 'New York', text, flags=re.IGNORECASE)
+        text = re.sub(r'\bmanhattan\b', 'Manhattan', text, flags=re.IGNORECASE)
+        text = re.sub(r'\bbrooklyn\b', 'Brooklyn', text, flags=re.IGNORECASE)
+        
+        return text
     
     def get_supported_languages(self) -> Dict[str, str]:
         """

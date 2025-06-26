@@ -37,3 +37,17 @@ gradio>=3.0.0
 # Configuration and utilities
 python-dotenv>=0.19.0
 Pillow>=9.0.0
+# Enhanced Translation Support
+EasyNMT>=2.0.0
+transformers>=4.20.0
+torch>=1.12.0
+sentencepiece>=0.1.96
+sacremoses>=0.0.53
+googletrans==4.0.0rc1
+langdetect>=1.0.9
+polyglot>=16.7.4
+pycountry>=22.3.13
+
+# Hindi and Indic Language Support
+indic-transliteration>=2.3.0
+hindi-tokenizer>=1.0.0

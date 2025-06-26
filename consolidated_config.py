@@ -91,6 +91,10 @@ LOCATION_SYNONYMS = {
         'downtown', 'city center', 'central', 'cbd', 'heart of city',
         'city centre', 'urban core', 'midtown'
     ],
+    'new_york': [
+        'new york', 'nyc', 'new york city', 'manhattan', 'brooklyn', 
+        'queens', 'bronx', 'staten island', 'ny', 'new york ny'
+    ],
     'beach': [
         'beach', 'beachfront', 'oceanfront', 'seaside', 'coastal',
         'waterfront', 'shore', 'beach access'
