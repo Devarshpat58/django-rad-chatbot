@@ -199,27 +199,17 @@ def ajax_search(request):
         
         # Process query
         rag_service = EnhancedRAGService.get_instance()
-        # About to process query - adding console logging after
         result = rag_service.process_query(
             query_text=query_text,
             session_id=session_key
         )
-        
-        # Console logging: Show response before sending to frontend
-        ConsoleLogger.log_django_web_response(query_text, result, session_key)
-        # Replacing manual logging with console logger function
 
-
-
-
-
-
-
-
-
-
-
-
+        # Add this line to log the response
+        ConsoleLogger.log_django_web_response(
+            query_text, result, session_key,
+            user=request.user if hasattr(request, "user") else None,
+            endpoint=request.path
+        )
         
         # Store query
         search_query = SearchQuery.objects.create(
@@ -297,6 +287,13 @@ def ajax_chat(request):
         result = rag_service.process_query(
             query_text=message,
             session_id=effective_session_id
+        )
+
+        # Add this line to log the chat response
+        ConsoleLogger.log_django_web_response(
+            message, result, effective_session_id,
+            user=request.user if hasattr(request, "user") else None,
+            endpoint=request.path
         )
         
         # Store query
