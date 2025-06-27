@@ -464,6 +464,9 @@ class EnhancedRAGService:
             mandatory_fields['name'] = 'Property Listing'
         if 'property_type' not in mandatory_fields:
             mandatory_fields['property_type'] = 'Property'
+        # Ensure price field is always present, even if not found in document
+        if 'price' not in mandatory_fields:
+            mandatory_fields['price'] = self._format_price_field(document)
         # Don't add default 'Location not specified' - let format method handle it
         
         return mandatory_fields
