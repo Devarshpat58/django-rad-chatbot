@@ -1336,6 +1336,9 @@
             }
         });
         
+        // Ensure price field is always included for comparison tables
+        fields.add('price');
+        
         let tableHTML = '<table class="comparison-table"><thead><tr><th>Property Feature</th>';
         results.forEach((_, index) => {
             tableHTML += `<th>Property ${index + 1}</th>`;
