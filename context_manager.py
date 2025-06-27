@@ -480,6 +480,16 @@ class ComparisonProcessor:
         """
         value = item.get(attribute)
         
+        # If not found at top level, check mandatory_fields
+        if value is None and 'mandatory_fields' in item:
+            value = item['mandatory_fields'].get(attribute)
+        
+        # If still not found, check source_data or document
+        if value is None:
+            source_data = item.get('source_data') or item.get('document') or item.get('source_json', {})
+            if isinstance(source_data, dict):
+                value = source_data.get(attribute)
+        
         if value is None:
             return 'N/A'
         
@@ -497,6 +507,7 @@ class ComparisonProcessor:
             return ', '.join(str(v) for v in value[:3])  # Limit list items
         else:
             return str(value)
+
     
     def _generate_comparison_summary(self, items: List[Dict], similarities: List[Dict], differences: List[Dict]) -> Dict:
         """
