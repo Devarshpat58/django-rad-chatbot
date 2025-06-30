@@ -17,7 +17,7 @@ from rag_api.services import RAGService
 from console_logger import ConsoleLogger
 from rag_api.services_enhanced import EnhancedRAGService
 from rag_api.models import SearchSession, SearchQuery
-from rag_api.translation_service import translate_query_to_english
+from rag_api.translation_service import translate_to_english
 
 logger = logging.getLogger(__name__)
 
@@ -199,7 +199,7 @@ def ajax_search(request):
         )
         
         # Translate query to English if needed
-        translation_result = translate_query_to_english(query_text)
+        translation_result = translate_to_english(query_text)
         english_query = translation_result['english_query']
         original_language = translation_result['detected_language']
         translation_needed = translation_result['translation_needed']
@@ -300,7 +300,7 @@ def ajax_chat(request):
         )
         
         # Translate message to English if needed
-        translation_result = translate_query_to_english(message)
+        translation_result = translate_to_english(message)
         english_message = translation_result['english_query']
         original_language = translation_result['detected_language']
         translation_needed = translation_result['translation_needed']

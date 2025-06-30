@@ -13,7 +13,7 @@ import json
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'django_rag_project.settings')
 django.setup()
 
-from rag_api.translation_service import translate_query_to_english, is_translation_available, get_translation_service
+from rag_api.translation_service import translate_to_english, is_translation_available, get_translation_service
 
 def demonstrate_translation():
     """Demonstrate the translation functionality"""
@@ -25,9 +25,8 @@ def demonstrate_translation():
     # Check translation availability
     print(f"Translation Service Available: {is_translation_available()}")
     service = get_translation_service()
-    status = service.get_service_status()
-    print(f"Service: {status['service']}")
-    print(f"Supported Languages: {len(service.get_supported_languages())}")
+    print(f"Service: Translation Service (fallback mode)")
+    print(f"Supported Languages: Basic language detection available")
     print()
     
     # Test cases demonstrating translation
@@ -47,12 +46,11 @@ def demonstrate_translation():
         print(f"\n{language} Query:")
         print(f"  Input:  '{query}'")
         
-        result = translate_query_to_english(query)
+        result = translate_to_english(query)
         
         print(f"  Output: '{result['english_query']}'")
         print(f"  Detected Language: {result['detected_language']}")
         print(f"  Translation Needed: {result['translation_needed']}")
-        print(f"  Confidence: {result['confidence']:.2f}")
     
     print("\n" + "=" * 60)
     print("INTEGRATION SUMMARY:")

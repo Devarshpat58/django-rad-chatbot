@@ -1,325 +1,268 @@
-# Django RAG API - Advanced Property Search System
+# Django RAG Chatbot
 
-## 🏠 Overview
+A sophisticated AI-powered multilingual real estate chatbot system that combines Retrieval-Augmented Generation (RAG) with advanced MarianMT translation capabilities.
 
-A sophisticated Retrieval-Augmented Generation (RAG) system built with Django for intelligent property search. The system combines semantic search, AI-powered analysis, and natural language processing to provide comprehensive property recommendations with detailed insights.
+## 🌟 Key Features
 
-## ✨ Key Features
+- **🌍 Multilingual Support**: MarianMT translation for 11 languages with offline operation
+- **🧠 Enhanced Language Detection**: Domain-specific text cleaning with confidence thresholds  
+- **🔍 RAG-Powered Search**: Semantic search with AI-generated responses
+- **💻 Modern Web Interface**: Django-based responsive UI with real-time chat
+- **⚡ GPU Acceleration**: Automatic GPU detection for optimal performance
+- **📊 Structured Responses**: Consistent API format for seamless integration
 
-- **🔍 Advanced Semantic Search**: AI-powered property search using sentence transformers
-- **🌍 Multi-Language Support**: Self-contained translation service for 6 languages (Spanish, French, German, Italian, Portuguese, English)
-- **🔑 No API Keys Required**: Built-in translation patterns without external dependencies
-- **📊 Intelligent Query Processing**: Natural language understanding with numeric constraints
-- **🤖 AI-Generated Summaries**: 200+ word comprehensive property analysis
-- **📋 Query-Relevant Fields**: Smart field extraction based on user intent
-- **📄 Complete JSON Data**: Full source documents from MongoDB
-- **💬 Interactive Chat Interface**: Modern, responsive web UI
-- **🔗 REST API**: Full API access for integrations
-- **📱 Mobile Responsive**: Works on all device sizes
+## 🏗️ System Architecture
 
-## 🛠️ Technology Stack
+The Django RAG Chatbot implements a modern web architecture optimized for multilingual real estate search:
 
-- **Backend**: Django 4.x, Python 3.8+
-- **Database**: MongoDB
-- **AI/ML**: Sentence Transformers, FAISS, spaCy
-- **Search**: Hybrid semantic + keyword search
-- **Frontend**: Modern HTML/CSS/JS with responsive design
-- **API**: Django REST Framework
+- **Presentation Layer**: Django web interface with responsive design
+- **Application Layer**: Django REST framework with API endpoints
+- **Translation Layer**: MarianMT models with enhanced language detection
+- **Intelligence Layer**: RAG system with semantic search
+- **Data Layer**: MongoDB with vector indexes
 
 ## 🚀 Quick Start
 
 ### Prerequisites
-
-- Python 3.8 or higher
-- MongoDB installed and running
-- Git
-- 8GB+ RAM recommended for AI models
+- Python 3.8+
+- Django 4.2+
+- MongoDB 4.0+
+- 8GB RAM (16GB recommended)
+- GPU optional (for translation acceleration)
 
 ### Installation
 
-1. **Clone the repository:**
-   ```bash
-   git clone <your-repo-url>
-   cd django_rag_api
-   ```
-
-2. **Create virtual environment:**
-   ```bash
-   python -m venv venv
-   
-   # Windows
-   venv\Scripts\activate
-   
-   # macOS/Linux
-   source venv/bin/activate
-   ```
-
-3. **Install dependencies:**
-   ```bash
-   pip install -r requirements.txt
-   ```
-
-4. **Configure MongoDB:**
-   - Ensure MongoDB is running on localhost:27017
-   - Import your Airbnb property data into a collection
-   - Update database settings in `config.py` if needed
-
-5. **Initialize the system:**
-   ```bash
-   python setup.py --full-setup
-   ```
-   This will:
-   - Build vocabulary from your MongoDB data
-   - Generate embeddings and create search indexes
-   - Download and setup AI models
-   - Optimize the system for property search
-
-6. **Run Django migrations:**
-   ```bash
-   python manage.py migrate
-   ```
-
-7. **Create superuser (optional):**
-   ```bash
-   python manage.py createsuperuser
-   ```
-
-8. **Start the development server:**
-   ```bash
-   python manage.py runserver
-   ```
-
-## 🌐 Access Points
-
-### Web Interface
-- **Chat Interface**: http://localhost:8000/chat/
-- **Search Interface**: http://localhost:8000/search/
-- **Dashboard**: http://localhost:8000/dashboard/
-- **Documentation**: http://localhost:8000/docs/
-
-### API Endpoints
-- **Chat API**: `POST /api/v1/chat/`
-- **Search API**: `POST /api/v1/search/`
-- **System Status**: `GET /api/v1/status/`
-- **Health Check**: `GET /api/v1/health/`
-
-## 🌍 Multi-Language Translation Service
-
-### Supported Languages
-The system includes a self-contained translation service that supports:
-- **Spanish** (Español)
-- **French** (Français) 
-- **German** (Deutsch)
-- **Italian** (Italiano)
-- **Portuguese** (Português)
-- **English** (default)
-
-### Translation Features
-- **🔑 No API Keys Required**: Completely self-contained using built-in Python libraries
-- **⚡ Fast Processing**: Instant pattern-based translation with LRU caching
-- **🎯 Real Estate Focused**: Specialized patterns for property search terminology
-- **🔍 Smart Detection**: Regex-based language detection with confidence scoring
-- **📊 Translation Metadata**: API responses include translation information
-
-### Example Translations
-```
-Spanish: "Encuentra apartamentos de 2 dormitorios cerca del centro"
-→ English: "find apartments de 2 bedrooms cerca del centro"
-
-French: "Trouvez des appartements de 2 chambres avec piscine"
-→ English: "find des apartments de 2 bedrooms avec piscine"
-
-German: "Finden Sie Wohnungen mit 2 Schlafzimmern und Parkplatz"
-→ English: "find Sie apartments mit 2 bedrooms und Parkplatz"
-```
-
-### API Usage
-The translation service is automatically integrated into all search endpoints:
+1. **Clone Repository**
 ```bash
-curl -X POST http://localhost:8000/api/v1/chat/ \
-     -H "Content-Type: application/json" \
-     -d '{"message": "Encuentra apartamentos de 2 dormitorios"}'
+git clone <repository-url>
+cd django-rad-chatbot
 ```
 
-Response includes translation metadata:
-```json
+2. **Install Dependencies**
+```bash
+pip install -r requirements.txt
+```
+
+3. **Configure Environment**
+```bash
+# Create .env file
+MONGODB_URI=mongodb://localhost:27017
+DEBUG=True
+SECRET_KEY=your-secret-key
+```
+
+4. **Database Setup**
+```bash
+python manage.py migrate
+python manage.py initialize_rag
+```
+
+5. **Start Development Server**
+```bash
+python manage.py runserver
+```
+
+6. **Access Application**
+- **Web Interface**: http://localhost:8000/
+- **Chat Interface**: http://localhost:8000/chat/
+- **Admin Panel**: http://localhost:8000/admin/
+
+## 🌐 Translation Service
+
+### MarianMT Integration
+
+The system uses Helsinki-NLP MarianMT models for high-quality neural machine translation:
+
+#### Supported Languages
+- Spanish (es), French (fr), German (de), Italian (it)
+- Portuguese (pt), Russian (ru), Chinese (zh), Japanese (ja)
+- Korean (ko), Arabic (ar), Hindi (hi)
+
+#### Translation Pipeline
+```python
 {
-  "response": "Found 5 apartments matching your criteria...",
-  "translation_info": {
-    "original_language": "spanish",
-    "confidence": 0.95,
-    "translated_query": "find apartments de 2 bedrooms"
-  }
+    'english_query': 'Translated English text',
+    'detected_language': 'es', 
+    'translation_needed': True
 }
 ```
 
-## 💬 Using the Chat Interface
+#### Key Features
+- **Helsinki-NLP Models**: Using Helsinki-NLP/opus-mt-{lang}-en models
+- **MarianTokenizer**: Proper SentencePiece tokenization for accurate translation
+- **Model Caching**: Efficient caching system to avoid reloading models
+- **GPU Acceleration**: Automatic GPU detection and utilization when available
+- **Structured Response**: Dictionary format for seamless integration
 
-### Example Queries:
-```
-Find 2 bedroom apartments under $150 per night
-Show me luxury properties with pools near downtown
-Pet-friendly houses for families with parking
-Studio apartments between $50-100 with WiFi
-Properties accommodating 6 guests with kitchen access
+## 📚 API Reference
+
+### Translation API
+
+**Endpoint**: `POST /api/translate/`
+
+**Request**:
+```json
+{
+    "query": "Hola, necesito un apartamento en Madrid"
+}
 ```
 
-### Response Features:
-- **AI Summary**: 200+ word intelligent analysis
-- **Query Fields**: Key information relevant to your search
-- **Source JSON**: Complete MongoDB document data
-- **Performance Stats**: Search time, relevance scores
-- **Interactive UI**: Collapsible sections, mobile-friendly
+**Response**:
+```json
+{
+    "english_query": "Hi, I need an apartment in Madrid",
+    "detected_language": "es",
+    "translation_needed": true
+}
+```
+
+### Chat API
+
+**Endpoint**: `POST /api/chat/`
+
+**Request**:
+```json
+{
+    "query": "Find 2 bedroom apartments under $2000",
+    "session_id": "user123"
+}
+```
+
+**Response**:
+```json
+{
+    "success": true,
+    "response": "I found several 2-bedroom apartments under $2000...",
+    "results": [...],
+    "metadata": {
+        "num_results": 5,
+        "processing_time": 1.2
+    }
+}
+```
 
 ## 🔧 Configuration
 
-### Database Settings (`config.py`):
+### Translation Service Configuration
+
 ```python
-MONGO_URI = "mongodb://localhost:27017/"
-DATABASE_NAME = "airbnb_data"
-COLLECTION_NAME = "listings"
+# MarianMT Configuration
+TRANSLATION_CONFIG = {
+    'model_cache_dir': './models/',
+    'max_length': 512,
+    'num_beams': 4,
+    'early_stopping': True,
+    'gpu_acceleration': True
+}
 ```
 
-### Search Parameters:
+### Language Detection Settings
+
 ```python
-TOP_K_RESULTS = 10
-EMBEDDING_MODEL = "all-MiniLM-L6-v2"
-MAX_SUMMARY_LENGTH = 400
+# Language Detection Configuration
+LANGUAGE_DETECTION_CONFIG = {
+    'confidence_threshold': 0.85,
+    'max_attempts': 3,
+    'domain_cleaning': True,
+    'fallback_enabled': True
+}
 ```
 
 ## 📁 Project Structure
 
 ```
-django_rag_api/
-├── core_system.py          # Main RAG system logic
-├── query_processor.py      # Query understanding & processing
-├── utils.py               # Utility functions & managers
-├── config.py              # Configuration settings
-├── setup.py               # System initialization
-├── rag_api/               # Django REST API
-│   ├── views.py           # API endpoints
-│   ├── services.py        # RAG service integration
-│   ├── translation_service.py # Self-contained translation service
-│   ├── urls.py            # URL routing
-│   └── models.py          # Django models
-├── web_interface/         # Web UI
-│   ├── views.py           # Web views
-│   └── templates/         # HTML templates
-├── templates/             # Base templates
-├── static/                # CSS/JS assets
-└── documentation/         # Additional docs
+django-rad-chatbot/
+├── django_rag_project/          # Django project settings
+├── rag_api/                     # RAG API application
+│   ├── services.py              # Core RAG services
+│   ├── translation_service.py   # MarianMT translation service
+│   └── management/commands/     # Django management commands
+├── web_interface/               # Web interface application
+├── templates/                   # Django templates
+├── static/                      # Static files (CSS, JS, images)
+├── documentation/               # Project documentation
+└── requirements.txt             # Python dependencies
 ```
 
-## 🧪 API Usage Examples
+## 🛠️ Development
 
-### Chat API
+### Running Tests
 ```bash
-curl -X POST http://localhost:8000/api/v1/chat/ \
-     -H "Content-Type: application/json" \
-     -d '{"message": "Find 2 bedroom apartments under $200"}'
+python manage.py test
 ```
 
-### Search API
+### Code Quality
 ```bash
-curl -X POST http://localhost:8000/api/v1/search/ \
-     -H "Content-Type: application/json" \
-     -d '{"query": "luxury properties with pools", "max_results": 5}'
+# Format code
+black .
+
+# Lint code
+flake8 .
+
+# Type checking
+mypy .
 ```
 
-## 🔄 System Requirements
+## 🚀 Production Deployment
 
-### Minimum:
-- 4GB RAM
-- 2GB storage
-- Python 3.8+
-- MongoDB 4.4+
+### Docker Deployment
+```dockerfile
+FROM python:3.9-slim
+WORKDIR /app
+COPY requirements.txt .
+RUN pip install -r requirements.txt
+COPY . .
+CMD ["gunicorn", "django_rag_project.wsgi:application"]
+```
 
-### Recommended:
-- 8GB+ RAM
-- 5GB storage
-- SSD storage
-- GPU support (optional, for faster processing)
-
-## 📊 Performance Optimization
-
-### First-Time Setup:
-- Initial setup may take 10-30 minutes depending on data size
-- Models are downloaded and cached locally
-- Indexes are pre-built for fast search
-
-### Production Tips:
-- Use Redis for caching in production
-- Consider GPU acceleration for large datasets
-- Monitor memory usage with large vocabularies
-- Use gunicorn for production deployment
-
-## 🐛 Troubleshooting
-
-### Common Issues:
-
-**"System not initialized" error:**
+### Environment Variables
 ```bash
-python setup.py --full-setup
+export DJANGO_SETTINGS_MODULE=django_rag_project.settings
+export MONGODB_URI=mongodb://production-server:27017
+export DEBUG=False
+export ALLOWED_HOSTS=yourdomain.com
 ```
 
-**MongoDB connection issues:**
-- Verify MongoDB is running: `mongosh`
-- Check connection string in `config.py`
+## 🔍 Troubleshooting
 
-**Memory issues during setup:**
-- Reduce batch size in setup configuration
-- Ensure adequate RAM available
+### Common Issues
 
-**Missing dependencies:**
-```bash
-pip install --upgrade -r requirements.txt
-```
+**Translation Service Issues**:
+- Check GPU availability: `python -c "import torch; print(torch.cuda.is_available())"`
+- Clear model cache: `rm -rf ./models/`
+- Verify language detection accuracy
 
-### Getting Help:
-1. Check the logs in `logs/` directory
-2. Visit the system status page: `/api/v1/status/`
-3. Review the documentation: `/docs/`
+**Web Interface Issues**:
+- Check Django logs: `python manage.py runserver --verbosity=2`
+- Verify database connection
+- Collect static files: `python manage.py collectstatic`
 
-## 🚀 Deployment
+## 📖 Documentation
 
-### Development:
-```bash
-python manage.py runserver 0.0.0.0:8000
-```
-
-### Production (example with gunicorn):
-```bash
-gunicorn django_rag_project.wsgi:application --bind 0.0.0.0:8000 --workers 4
-```
-
-## 📝 License
-
-This project is licensed under the MIT License - see the LICENSE file for details.
+For complete documentation, see:
+- [Complete Project Documentation](documentation/COMPLETE_PROJECT_DOCUMENTATION.md)
+- [Translation Service Documentation](documentation/TRANSLATION_SERVICE.md)
+- [Enhanced Language Detection](documentation/ENHANCED_LANGUAGE_DETECTION.md)
 
 ## 🤝 Contributing
 
 1. Fork the repository
 2. Create a feature branch
 3. Make your changes
-4. Add tests if applicable
+4. Add tests
 5. Submit a pull request
 
-## 📞 Support
+## 📄 License
 
-For questions or issues:
-- Create an issue on GitHub
-- Check the documentation at `/docs/`
-- Review the troubleshooting section above
+This project is licensed under the MIT License - see the LICENSE file for details.
 
-## 🎯 Next Steps
+## 🙏 Acknowledgments
 
-After successful setup:
-1. Import your property data into MongoDB
-2. Run the full setup to build indexes
-3. Test with the chat interface
-4. Explore the API endpoints
-5. Customize for your specific use case
+- Helsinki-NLP for MarianMT models
+- Hugging Face for transformers library
+- Django community for the web framework
+- MongoDB for the database solution
 
 ---
 
-**Happy Searching! 🏡**
+*Django RAG Chatbot v2.0 - Advanced AI-Powered Multilingual Real Estate Chatbot*

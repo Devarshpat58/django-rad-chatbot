@@ -35,7 +35,7 @@ from .serializers import (
     ChatResponseSerializer, BulkSearchSerializer, BulkSearchResponseSerializer
 )
 from .services import RAGService
-from .translation_service import translate_query_to_english, is_translation_available
+from .translation_service import translate_to_english, is_translation_available
 
 logger = logging.getLogger(__name__)
 
@@ -93,7 +93,7 @@ class SearchAPIView(APIView):
             start_time = timezone.now()
             
             # Translate query to English if needed
-            translation_result = translate_query_to_english(query_text)
+            translation_result = translate_to_english(query_text)
             english_query = translation_result['english_query']
             original_language = translation_result['detected_language']
             translation_needed = translation_result['translation_needed']
@@ -174,7 +174,7 @@ class ChatAPIView(APIView):
         
         try:
             # Translate message to English if needed
-            translation_result = translate_query_to_english(message)
+            translation_result = translate_to_english(message)
             english_message = translation_result['english_query']
             original_language = translation_result['detected_language']
             translation_needed = translation_result['translation_needed']
@@ -474,8 +474,18 @@ class BulkSearchAPIView(APIView):
             
             for i, query_text in enumerate(queries):
                 try:
+                    # Translate query to English if needed
+                    translation_result = translate_to_english(query_text)
+                    english_query = translation_result['english_query']
+                    original_language = translation_result['detected_language']
+                    translation_needed = translation_result['translation_needed']
+                    
+                    # Log translation if it occurred
+                    if translation_needed:
+                        logger.info(f"Translated bulk query {i+1} from {original_language}: '{query_text}' -> '{english_query}'")
+                    
                     result = rag_service.process_query(
-                        query_text=query_text,
+                        query_text=english_query,
                         session_id=session_id
                     )
                     
