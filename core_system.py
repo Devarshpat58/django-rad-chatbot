@@ -244,8 +244,8 @@ class QueryUnderstandingEngine:
                 'cleaned_query': processed_query.cleaned_query,
                 'intent': processed_query.intent,
                 'entities': self._convert_entities_format(processed_query.entities),
-                'keywords': (list(processed_query.entities.get('property_types', [])) + 
-                           list(processed_query.entities.get('amenities', []))) if processed_query.entities else [],
+                'keywords': self._extract_all_keywords_from_entities(processed_query.entities, processed_query.cleaned_query), 
+
                 'semantic_features': processed_query.contextual_info,
                 'numeric_constraints': processed_query.numeric_constraints,
                 'context_enhanced_query': processed_query.enhanced_query,
@@ -328,6 +328,23 @@ class QueryUnderstandingEngine:
         analysis['confidence_score'] = self._calculate_confidence_enhanced(analysis)
         
         return analysis
+    
+    def _extract_all_keywords_from_entities(self, entities_dict: Dict[str, List[str]], cleaned_query: str) -> List[str]:
+        """Extract all relevant keywords from entities and basic keyword extraction"""
+        keywords = []
+        
+        # Add entity keywords
+        if entities_dict:
+            for entity_type, entity_list_items in entities_dict.items():
+                keywords.extend(entity_list_items)
+        
+        # Add basic keyword extraction as fallback
+        basic_keywords = self.keyword_extractor.get_query_keywords(cleaned_query)
+        for keyword in basic_keywords:
+            if keyword not in keywords:
+                keywords.append(keyword)
+        
+        return keywords
     
     def _convert_entities_format(self, entities_dict: Dict[str, List[str]]) -> List[str]:
         """Convert new entity format to legacy format for compatibility"""
