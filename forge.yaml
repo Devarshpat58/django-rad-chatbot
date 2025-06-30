@@ -1,0 +1,135 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/antinomyhq/forge/refs/heads/main/forge.schema.json
+agents:
+- id: forge
+  title: Implementation focussed
+  model: anthropic/claude-sonnet-4
+  description: 'Hands-on implementation agent that executes software development tasks through a structured 4-phase approach: task analysis, solution strategy, implementation, and quality assurance. Makes actual changes to codebases, runs shell commands, creates/modifies files, installs dependencies, and performs concrete development work. Use for building features, fixing bugs, refactoring code, or any task requiring actual modifications. Do not use for analysis-only tasks or when you want to explore options without making changes. Always validates changes through compilation and testing.'
+  system_prompt: '{{> forge-system-prompt-engineer-act.hbs }}'
+  user_prompt: |-
+    {{#if (eq event.name 'forge/user_task_update')}}
+    <feedback>{{event.value}}</feedback>
+    {{else}}
+    <task>{{event.value}}</task>
+    {{/if}}
+  tools:
+  - forge_tool_fs_read
+  - forge_tool_fs_create
+  - forge_tool_fs_remove
+  - forge_tool_fs_patch
+  - forge_tool_process_shell
+  - forge_tool_net_fetch
+  - forge_tool_fs_search
+  - forge_tool_fs_undo
+  - forge_tool_task_list_append
+  - forge_tool_task_list_append_multiple
+  - forge_tool_task_list_mark_done
+  - forge_tool_task_list_list
+  - forge_tool_task_list_clear
+  compact:
+    retention_window: 6
+    eviction_window: 0.2
+    max_tokens: 2000
+    token_threshold: 100000
+    message_threshold: 200
+    prompt: '{{> forge-system-prompt-context-summarizer.hbs }}'
+    model: anthropic/claude-sonnet-4
+- id: muse
+  title: Analysis and planning focussed
+  model: anthropic/claude-sonnet-4
+  description: Strategic planning agent that analyzes codebases and creates comprehensive implementation plans without making any actual changes. Examines project structure, identifies risks, creates detailed Markdown documentation in the plans/ directory with objectives, implementation steps, and verification criteria. Use for project analysis, architectural guidance, risk assessment, or pre-implementation planning. Do not use when you need actual code changes or immediate implementation. Provides advisory recommendations and strategic roadmaps only.
+  system_prompt: '{{> forge-system-prompt-engineer-plan.hbs }}'
+  user_prompt: |-
+    {{#if (eq event.name 'muse/user_task_update')}}
+    <feedback>{{event.value}}</feedback>
+    {{else}}
+    <task>{{event.value}}</task>
+    {{/if}}
+    Only create new plans or update existing ones.
+    Do not modify, create, or delete any code files.
+  tools:
+  - forge_tool_fs_read
+  - forge_tool_net_fetch
+  - forge_tool_fs_search
+  - forge_tool_fs_create
+  - forge_tool_fs_patch
+  compact:
+    retention_window: 6
+    eviction_window: 0.2
+    max_tokens: 2000
+    token_threshold: 120000
+    message_threshold: 200
+    prompt: '{{> forge-system-prompt-context-summarizer.hbs }}'
+    model: anthropic/claude-sonnet-4
+variables:
+  operating_agent: forge
+updates:
+  frequency: daily
+  auto_update: true
+commands:
+- name: fixme
+  description: Looks for all the fixme comments in the code and attempts to fix them
+  prompt: Find all the FIXME comments in source-code files and attempt to fix them.
+- name: pr-description
+  description: Updates the description of the PR
+  prompt: |-
+    - I have created a Pull Request with all the accepted changes
+    - Understand the current PR deeply using the GH CLI and update the PR title and description
+    - Make sure the title follows conventional commits standard
+    - Top-level summary should contain 2-3 lines about the core functionality improvements
+- name: check
+  description: Checks if the code is ready to be committed
+  prompt: |-
+    - Run the `lint` and `test` commands and verify if everything is fine.
+      <lint>cargo +nightly fmt --all; cargo +nightly clippy --fix --allow-staged --allow-dirty --workspace</lint>
+      <test>cargo insta test --accept --unreferenced=delete</test>
+    - Fix every issue found in the process
+model: anthropic/claude-sonnet-4
+max_walker_depth: 1024
+custom_rules: |-
+  Handling Errors:
+  - Use `anyhow::Result` for error handling in services and repositories.
+  - Create domain errors using `thiserror`.
+  - Never implement `From` for converting domain errors, manually convert them
+
+  Writing Tests:
+  - All tests should be written in three discrete steps:
+    ```rust
+    use pretty_assertions::assert_eq; // Always use pretty assertions
+
+    fn test_foo() {
+        let fixture = ...; // Instantiate a fixture for the test
+        let actual = ...; // Execute the fixture to create an output
+        let expected = ...; // Define a hand written expected result
+        assert_eq!(actual, expected); // Assert that the actual result matches the expected result
+    }
+    ```
+  - Use `pretty_assertions` for better error messages.
+  - Use fixtures to create test data.
+  - Use `assert_eq!` for equality checks.
+  - Use `assert!(...)` for boolean checks.
+  - Use unwraps in test functions and anyhow::Result in fixtures.
+  - Keep the boilerplate to a minimum.
+  - Use words like `fixture`, `actual` and `expected` in test functions.
+  - Fixtures should be generic and reusable.
+  - Test should always be written in the same file as the source code.
+
+  Running Tests:
+  - We use `insta` to run tests:
+    ```
+    cargo insta test --accept --unreferenced=delete
+    ```
+
+  Verification:
+  - run the following command to format and validate if the code is working:
+    ```
+    cargo +nightly fmt --all; cargo +nightly clippy --fix --allow-staged --allow-dirty --workspace;
+    ```
+
+  Writing Domain Types:
+  - Use `derive_setters` to derive setters and use the `strip_option` and the `into` attributes on the struct types.
+
+  Refactoring:
+  - If asked to fix failing tests, always confirm whether to update the implementation or the tests.
+top_p: 0.8
+top_k: 30
+max_tokens: 20480

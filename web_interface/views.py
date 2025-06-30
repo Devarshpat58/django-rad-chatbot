@@ -1,6 +1,6 @@
 """
 Web interface views for Django RAG API
-Provides HTML templates and web-based interaction
+Provides HTML templates and web-based interaction with translation support
 """
 
 from django.shortcuts import render
@@ -17,6 +17,7 @@ from rag_api.services import RAGService
 from console_logger import ConsoleLogger
 from rag_api.services_enhanced import EnhancedRAGService
 from rag_api.models import SearchSession, SearchQuery
+from rag_api.translation_service import translate_query_to_english
 
 logger = logging.getLogger(__name__)
 
@@ -175,7 +176,7 @@ class DashboardView(TemplateView):
 @csrf_exempt
 def ajax_search(request):
     """
-    AJAX search endpoint for web interface
+    AJAX search endpoint for web interface with translation support
     """
     if request.method != 'POST':
         return JsonResponse({'error': 'Method not allowed'}, status=405)
@@ -197,10 +198,20 @@ def ajax_search(request):
             defaults={'user': request.user if request.user.is_authenticated else None}
         )
         
-        # Process query
+        # Translate query to English if needed
+        translation_result = translate_query_to_english(query_text)
+        english_query = translation_result['english_query']
+        original_language = translation_result['detected_language']
+        translation_needed = translation_result['translation_needed']
+        
+        # Log translation if it occurred
+        if translation_needed:
+            logger.info(f"Translated query from {original_language}: '{query_text}' -> '{english_query}'")
+        
+        # Process query using translated text
         rag_service = EnhancedRAGService.get_instance()
         result = rag_service.process_query(
-            query_text=query_text,
+            query_text=english_query,  # Use translated query for processing
             session_id=session_key
         )
 
@@ -211,10 +222,10 @@ def ajax_search(request):
             endpoint=request.path
         )
         
-        # Store query
+        # Store query (store original query text for user reference)
         search_query = SearchQuery.objects.create(
             session=search_session,
-            query_text=query_text,
+            query_text=query_text,  # Store original query
             response=result['response'],
             response_metadata=result['metadata'],
             execution_time=result['metadata'].get('execution_time', 0)
@@ -238,9 +249,15 @@ def ajax_search(request):
         return JsonResponse({
             'success': True,
             'query_id': str(search_query.id),
-            'response': result['response'],
+            'response': result['response'],  # Response is always in English
             'metadata': cleaned_metadata,
-            'timestamp': search_query.created_at.isoformat()
+            'timestamp': search_query.created_at.isoformat(),
+            'english_query': english_query,  # Include translated query
+            'translation': {
+                'original_language': original_language,
+                'translation_needed': translation_needed,
+                'original_query': query_text
+            }
         })
         
     except json.JSONDecodeError:
@@ -256,7 +273,7 @@ def ajax_search(request):
 @csrf_exempt
 def ajax_chat(request):
     """
-    AJAX chat endpoint for web interface
+    AJAX chat endpoint for web interface with translation support
     """
     if request.method != 'POST':
         return JsonResponse({'error': 'Method not allowed'}, status=405)
@@ -282,10 +299,20 @@ def ajax_chat(request):
             defaults={'user': request.user if request.user.is_authenticated else None}
         )
         
+        # Translate message to English if needed
+        translation_result = translate_query_to_english(message)
+        english_message = translation_result['english_query']
+        original_language = translation_result['detected_language']
+        translation_needed = translation_result['translation_needed']
+        
+        # Log translation if it occurred
+        if translation_needed:
+            logger.info(f"Translated chat message from {original_language}: '{message}' -> '{english_message}'")
+        
         # Process query using chat API endpoint logic
         rag_service = EnhancedRAGService.get_instance()
         result = rag_service.process_query(
-            query_text=message,
+            query_text=english_message,  # Use translated message
             session_id=effective_session_id
         )
 
@@ -296,10 +323,10 @@ def ajax_chat(request):
             endpoint=request.path
         )
         
-        # Store query
+        # Store query (store original message for user reference)
         search_query = SearchQuery.objects.create(
             session=search_session,
-            query_text=message,
+            query_text=message,  # Store original message
             response=result['response'],
             response_metadata=result['metadata'],
             execution_time=result['metadata'].get('execution_time', 0)
@@ -323,7 +350,7 @@ def ajax_chat(request):
         return JsonResponse({
             'success': True,
             'query_id': str(search_query.id),
-            'response': result['response'],
+            'response': result['response'],  # Response is always in English
             'metadata': cleaned_metadata,
             'timestamp': search_query.created_at.isoformat(),
             'session_id': effective_session_id,
@@ -332,7 +359,13 @@ def ajax_chat(request):
             'execution_time': cleaned_metadata.get('execution_time', 0),
             'num_results': cleaned_metadata.get('num_results', 0),
             'max_similarity_score': cleaned_metadata.get('max_similarity_score', 0.0),
-            'avg_similarity_score': cleaned_metadata.get('avg_similarity_score', 0.0)
+            'avg_similarity_score': cleaned_metadata.get('avg_similarity_score', 0.0),
+            'english_message': english_message,  # Include translated message
+            'translation': {
+                'original_language': original_language,
+                'translation_needed': translation_needed,
+                'original_message': message
+            }
         })
         
     except json.JSONDecodeError:
