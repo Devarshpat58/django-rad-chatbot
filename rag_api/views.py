@@ -35,7 +35,7 @@ from .serializers import (
     ChatResponseSerializer, BulkSearchSerializer, BulkSearchResponseSerializer
 )
 from .services import RAGService
-from .translation_service import translate_to_english, is_translation_available
+from .translation_service import translate_to_english, is_translation_available, translate_response_to_user_language
 
 logger = logging.getLogger(__name__)
 
