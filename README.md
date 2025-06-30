@@ -39,7 +39,7 @@ A sophisticated Retrieval-Augmented Generation (RAG) system built with Django fo
 
 1. **Clone the repository:**
    ```bash
-   git clone <your-repo-url>
+   git clone https://github.com/Devarshpat58/django-rad-chatbot
    cd django_rag_api
    ```
 
