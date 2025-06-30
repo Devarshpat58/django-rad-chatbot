@@ -32,10 +32,91 @@ The Django RAG Chatbot implements a modern web architecture optimized for multil
 
 ### Installation
 
-1. **Clone Repository**
-```bash
-git clone <repository-url>
-cd django-rad-chatbot
+1. **Clone the repository:**
+   ```bash
+   git clone https://github.com/Devarshpat58/django-rad-chatbot
+   cd django_rag_api
+   ```
+
+2. **Create virtual environment:**
+   ```bash
+   python -m venv venv
+   
+   # Windows
+   venv\Scripts\activate
+   
+   # macOS/Linux
+   source venv/bin/activate
+   ```
+
+3. **Install dependencies:**
+   ```bash
+   pip install -r requirements.txt
+   ```
+
+4. **Configure MongoDB:**
+   - Ensure MongoDB is running on localhost:27017
+   - Import your Airbnb property data into a collection
+   - Update database settings in `config.py` if needed
+
+5. **Initialize the system:**
+   ```bash
+   python setup.py --full-setup
+   ```
+   This will:
+   - Build vocabulary from your MongoDB data
+   - Generate embeddings and create search indexes
+   - Download and setup AI models
+   - Optimize the system for property search
+
+6. **Run Django migrations:**
+   ```bash
+   python manage.py migrate
+   ```
+
+7. **Create superuser (optional):**
+   ```bash
+   python manage.py createsuperuser
+   ```
+
+8. **Start the development server:**
+   ```bash
+   python manage.py runserver
+   ```
+
+## 🌐 Access Points
+
+### Web Interface
+- **Chat Interface**: http://localhost:8000/chat/
+- **Search Interface**: http://localhost:8000/search/
+- **Dashboard**: http://localhost:8000/dashboard/
+- **Documentation**: http://localhost:8000/docs/
+
+### API Endpoints
+- **Chat API**: `POST /api/v1/chat/`
+- **Search API**: `POST /api/v1/search/`
+- **System Status**: `GET /api/v1/status/`
+- **Health Check**: `GET /api/v1/health/`
+
+## 🌍 Multi-Language Translation Service
+
+### Supported Languages
+The system includes a self-contained translation service that supports:
+- **Spanish** (Español)
+- **French** (Français) 
+- **German** (Deutsch)
+- **Italian** (Italiano)
+- **Portuguese** (Português)
+- **English** (default)
+
+### Translation Features
+- **🔑 No API Keys Required**: Completely self-contained using built-in Python libraries
+- **⚡ Fast Processing**: Instant pattern-based translation with LRU caching
+- **🎯 Real Estate Focused**: Specialized patterns for property search terminology
+- **🔍 Smart Detection**: Regex-based language detection with confidence scoring
+- **📊 Translation Metadata**: API responses include translation information
+
+### Example Translations
 ```
 
 2. **Install Dependencies**
@@ -265,4 +346,5 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 
 ---
 
-*Django RAG Chatbot v2.0 - Advanced AI-Powered Multilingual Real Estate Chatbot*
+**Happy Searching! 🏡**
+
