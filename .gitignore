@@ -254,3 +254,7 @@ local_settings.py
 *.db
 *.sqlite
 *.sqlite3
+
+# Preprocessed data files
+preprocessed_data/
+*.preprocessing_stats.json
