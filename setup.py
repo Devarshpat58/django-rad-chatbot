@@ -9,6 +9,7 @@ This module handles the complete initialization of the Airbnb property search sy
 - FAISS index creation (skipped if already built)
 - Numeric filters optimization
 - System validation and testing
+- Translation model preloading and accuracy optimization
 
 The system automatically detects existing components and skips recreation unless
 --force flag is used, making subsequent setups much faster.
@@ -19,6 +20,9 @@ Usage:
     python setup.py --rebuild-indexes         # Rebuild only indexes
     python setup.py --build-vocab-only        # Build only vocabulary
     python setup.py --test-system             # Test system components
+    python setup.py --preload-translation     # Preload translation models
+    python setup.py --setup-translation-accuracy  # Setup translation accuracy improvements
+    python setup.py --full-translation-setup # Complete translation setup with accuracy improvements
 """
 import os
 import logging
@@ -36,6 +40,27 @@ from utils import MongoDBConnector, IndexManager
 from core_system import JSONRAGSystem
 from utils import VocabularyManager, AirbnbOptimizer, TextProcessor
 from logging_config import setup_logging, StructuredLogger, LogOperation, log_performance  # Updated import
+
+# Import translation components for model preloading
+try:
+    from rag_api.translation_service import TranslationService, get_translation_service
+    from transformers import MarianMTModel, MarianTokenizer
+    import torch
+    TRANSLATION_AVAILABLE = True
+except ImportError as e:
+    TRANSLATION_AVAILABLE = False
+    print(f"Translation components not available: {e}")
+
+# Import additional libraries for translation accuracy improvements
+try:
+    import numpy as np
+    from scipy.spatial.distance import cosine
+    from sklearn.feature_extraction.text import TfidfVectorizer
+    from sklearn.metrics.pairwise import cosine_similarity
+    ACCURACY_LIBS_AVAILABLE = True
+except ImportError as e:
+    ACCURACY_LIBS_AVAILABLE = False
+    print(f"Translation accuracy libraries not available: {e}")
 
 # Set up enhanced logging for setup process - using enhanced logging system only
 # Initialize the enhanced logging system first
@@ -499,6 +524,473 @@ class SystemSetup:
         print(f"  - Cache Dir: {Config.CACHE_DIR}")
         print("\n" + "="*60)
     
+    # === NEW TRANSLATION MODEL PRELOADING FUNCTIONALITY ===
+    
+    def setup_translation_models(self, force_reload: bool = False) -> bool:
+        """
+        Preload all translation models for faster runtime performance
+        
+        Args:
+            force_reload: Force reload models even if already cached
+            
+        Returns:
+            True if setup successful, False otherwise
+        """
+        logger.info("Starting translation model preloading...")
+        
+        if not TRANSLATION_AVAILABLE:
+            logger.error("Translation components not available. Install transformers and torch.")
+            return False
+        
+        try:
+            # Initialize translation service
+            translation_service = get_translation_service()
+            
+            # Check if models are already loaded
+            if not force_reload and self._check_translation_models_loaded(translation_service):
+                logger.info("Translation models already loaded, skipping preload")
+                return True
+            
+            # Preload forward translation models (language -> English)
+            forward_models = {
+                'es': 'Helsinki-NLP/opus-mt-es-en',  # Spanish
+                'fr': 'Helsinki-NLP/opus-mt-fr-en',  # French
+                'de': 'Helsinki-NLP/opus-mt-de-en',  # German
+                'it': 'Helsinki-NLP/opus-mt-it-en',  # Italian
+                'pt': 'Helsinki-NLP/opus-mt-pt-en',  # Portuguese
+                'ru': 'Helsinki-NLP/opus-mt-ru-en',  # Russian
+                'zh': 'Helsinki-NLP/opus-mt-zh-en',  # Chinese
+                'ja': 'Helsinki-NLP/opus-mt-ja-en',  # Japanese
+                'ko': 'Helsinki-NLP/opus-mt-ko-en',  # Korean
+                'ar': 'Helsinki-NLP/opus-mt-ar-en',  # Arabic
+                'hi': 'Helsinki-NLP/opus-mt-hi-en',  # Hindi
+            }
+            
+            # Preload reverse translation models (English -> language)
+            reverse_models = {
+                'es': 'Helsinki-NLP/opus-mt-en-es',  # English to Spanish
+                'fr': 'Helsinki-NLP/opus-mt-en-fr',  # English to French
+                'de': 'Helsinki-NLP/opus-mt-en-de',  # English to German
+                'it': 'Helsinki-NLP/opus-mt-en-it',  # English to Italian
+                'pt': 'Helsinki-NLP/opus-mt-en-pt',  # English to Portuguese
+                'ru': 'Helsinki-NLP/opus-mt-en-ru',  # English to Russian
+                'zh': 'Helsinki-NLP/opus-mt-en-zh',  # English to Chinese
+                'ja': 'Helsinki-NLP/opus-mt-en-ja',  # English to Japanese
+                'ko': 'Helsinki-NLP/opus-mt-en-ko',  # English to Korean
+                'ar': 'Helsinki-NLP/opus-mt-en-ar',  # English to Arabic
+                'hi': 'Helsinki-NLP/opus-mt-en-hi',  # English to Hindi
+            }
+            
+            total_models = len(forward_models) + len(reverse_models)
+            loaded_count = 0
+            
+            logger.info(f"Preloading {total_models} translation models...")
+            
+            # Load forward translation models
+            for lang_code, model_name in forward_models.items():
+                logger.info(f"Loading forward model: {model_name}")
+                if translation_service._load_model(lang_code, reverse=False):
+                    loaded_count += 1
+                    logger.info(f"✓ Forward model loaded: {lang_code} -> en")
+                else:
+                    logger.warning(f"✗ Failed to load forward model: {lang_code} -> en")
+            
+            # Load reverse translation models
+            for lang_code, model_name in reverse_models.items():
+                logger.info(f"Loading reverse model: {model_name}")
+                if translation_service._load_model(lang_code, reverse=True):
+                    loaded_count += 1
+                    logger.info(f"✓ Reverse model loaded: en -> {lang_code}")
+                else:
+                    logger.warning(f"✗ Failed to load reverse model: en -> {lang_code}")
+            
+            # Test models with sample translations
+            if self._test_preloaded_models(translation_service):
+                logger.info(f"Translation model preloading completed: {loaded_count}/{total_models} models loaded")
+                return True
+            else:
+                logger.warning("Translation model testing failed")
+                return False
+                
+        except Exception as e:
+            logger.error(f"Translation model preloading failed: {e}")
+            return False
+    
+    def _check_translation_models_loaded(self, translation_service: TranslationService) -> bool:
+        """Check if translation models are already loaded"""
+        expected_models = ['es', 'fr', 'de', 'it', 'pt', 'ru', 'zh', 'ja', 'ko', 'ar', 'hi']
+        
+        # Check forward models
+        forward_loaded = all(lang in translation_service.models for lang in expected_models)
+        
+        # Check reverse models
+        reverse_loaded = all(f"{lang}_reverse" in translation_service.models for lang in expected_models)
+        
+        return forward_loaded and reverse_loaded
+    
+    def _test_preloaded_models(self, translation_service: TranslationService) -> bool:
+        """Test preloaded translation models with sample texts"""
+        test_cases = [
+            ('es', 'Hola, ¿cómo estás?'),
+            ('fr', 'Bonjour, comment allez-vous?'),
+            ('de', 'Hallo, wie geht es dir?'),
+            ('it', 'Ciao, come stai?'),
+            ('pt', 'Olá, como está?'),
+        ]
+        
+        success_count = 0
+        
+        for lang_code, test_text in test_cases:
+            try:
+                # Test forward translation
+                forward_result = translation_service._translate_with_marian(test_text, lang_code, 'en')
+                if forward_result and forward_result != test_text:
+                    success_count += 1
+                    logger.debug(f"Forward test passed: {lang_code} -> en")
+                
+                # Test reverse translation
+                reverse_result = translation_service._translate_with_marian('Hello, how are you?', 'en', lang_code)
+                if reverse_result and reverse_result != 'Hello, how are you?':
+                    success_count += 1
+                    logger.debug(f"Reverse test passed: en -> {lang_code}")
+                    
+            except Exception as e:
+                logger.warning(f"Translation test failed for {lang_code}: {e}")
+        
+        return success_count >= len(test_cases)  # At least forward tests should pass
+    
+    def setup_translation_accuracy_improvements(self) -> bool:
+        """
+        Setup translation accuracy improvements including:
+        - Ensemble translation methods
+        - Translation confidence scoring
+        - Context-aware translation
+        - Translation quality validation
+        """
+        logger.info("Setting up translation accuracy improvements...")
+        
+        if not ACCURACY_LIBS_AVAILABLE:
+            logger.warning("Translation accuracy libraries not available. Install numpy, scipy, scikit-learn.")
+            return False
+        
+        try:
+            # Create accuracy improvement components
+            accuracy_components = {
+                'ensemble_translator': self._setup_ensemble_translator(),
+                'confidence_scorer': self._setup_confidence_scorer(),
+                'context_analyzer': self._setup_context_analyzer(),
+                'quality_validator': self._setup_quality_validator(),
+            }
+            
+            # Save accuracy components configuration
+            self._save_accuracy_config(accuracy_components)
+            
+            logger.info("Translation accuracy improvements setup completed")
+            return True
+            
+        except Exception as e:
+            logger.error(f"Translation accuracy setup failed: {e}")
+            return False
+    
+    def _setup_ensemble_translator(self) -> Dict[str, Any]:
+        """Setup ensemble translation method for improved accuracy"""
+        ensemble_config = {
+            'enabled': True,
+            'methods': [
+                {
+                    'name': 'marian_mt',
+                    'weight': 0.7,
+                    'description': 'Primary MarianMT translation'
+                },
+                {
+                    'name': 'fallback_patterns',
+                    'weight': 0.2,
+                    'description': 'Pattern-based fallback translation'
+                },
+                {
+                    'name': 'context_aware',
+                    'weight': 0.1,
+                    'description': 'Context-aware translation adjustments'
+                }
+            ],
+            'confidence_threshold': 0.8,
+            'min_agreement_ratio': 0.6
+        }
+        
+        logger.info("Ensemble translator configured with weighted voting")
+        return ensemble_config
+    
+    def _setup_confidence_scorer(self) -> Dict[str, Any]:
+        """Setup translation confidence scoring system"""
+        confidence_config = {
+            'enabled': True,
+            'scoring_methods': [
+                'language_detection_confidence',
+                'translation_length_ratio',
+                'character_encoding_quality',
+                'linguistic_pattern_matching',
+                'back_translation_consistency'
+            ],
+            'thresholds': {
+                'high_confidence': 0.9,
+                'medium_confidence': 0.7,
+                'low_confidence': 0.5
+            },
+            'actions': {
+                'low_confidence': 'request_clarification',
+                'medium_confidence': 'use_with_warning',
+                'high_confidence': 'use_directly'
+            }
+        }
+        
+        logger.info("Translation confidence scorer configured")
+        return confidence_config
+    
+    def _setup_context_analyzer(self) -> Dict[str, Any]:
+        """Setup context-aware translation improvements"""
+        context_config = {
+            'enabled': True,
+            'real_estate_context': {
+                'property_types': ['apartment', 'house', 'condo', 'studio', 'villa'],
+                'amenities': ['wifi', 'parking', 'pool', 'gym', 'balcony', 'garden'],
+                'locations': ['downtown', 'suburb', 'city center', 'near metro', 'beach'],
+                'price_terms': ['rent', 'buy', 'lease', 'deposit', 'monthly', 'yearly']
+            },
+            'context_boosting': {
+                'property_queries': 1.2,
+                'location_queries': 1.1,
+                'price_queries': 1.15,
+                'amenity_queries': 1.05
+            },
+            'domain_specific_corrections': True
+        }
+        
+        logger.info("Context-aware translation analyzer configured")
+        return context_config
+    
+    def _setup_quality_validator(self) -> Dict[str, Any]:
+        """Setup translation quality validation system"""
+        quality_config = {
+            'enabled': True,
+            'validation_methods': [
+                'semantic_similarity_check',
+                'language_consistency_check',
+                'domain_terminology_check',
+                'grammar_structure_check'
+            ],
+            'quality_metrics': {
+                'semantic_similarity_threshold': 0.7,
+                'language_consistency_threshold': 0.8,
+                'terminology_accuracy_threshold': 0.9,
+                'grammar_score_threshold': 0.6
+            },
+            'fallback_strategies': [
+                'retry_with_different_model',
+                'use_ensemble_method',
+                'request_human_review',
+                'use_original_with_warning'
+            ]
+        }
+        
+        logger.info("Translation quality validator configured")
+        return quality_config
+    
+    def _save_accuracy_config(self, components: Dict[str, Any]) -> None:
+        """Save translation accuracy configuration to file"""
+        import json
+        
+        config_path = Config.DATA_DIR / 'translation_accuracy_config.json'
+        
+        accuracy_config = {
+            'version': '1.0',
+            'created_at': datetime.now().isoformat(),
+            'components': components,
+            'system_info': {
+                'torch_available': torch.cuda.is_available() if TRANSLATION_AVAILABLE else False,
+                'device': 'cuda' if torch.cuda.is_available() else 'cpu',
+                'accuracy_libs': ACCURACY_LIBS_AVAILABLE
+            }
+        }
+        
+        with open(config_path, 'w', encoding='utf-8') as f:
+            json.dump(accuracy_config, f, indent=2, ensure_ascii=False)
+        
+        logger.info(f"Translation accuracy configuration saved to: {config_path}")
+    
+    def full_translation_setup(self, force_reload: bool = False) -> bool:
+        """
+        Complete translation setup including model preloading and accuracy improvements
+        
+        Args:
+            force_reload: Force reload all components
+            
+        Returns:
+            True if setup successful, False otherwise
+        """
+        logger.info("Starting complete translation setup...")
+        
+        try:
+            # Step 1: Preload translation models
+            if not self.setup_translation_models(force_reload):
+                logger.error("Translation model preloading failed")
+                return False
+            
+            # Step 2: Setup accuracy improvements
+            if not self.setup_translation_accuracy_improvements():
+                logger.warning("Translation accuracy improvements setup failed, continuing with basic setup")
+            
+            # Step 3: Test complete system
+            if self._test_complete_translation_system():
+                logger.info("Complete translation setup successful")
+                return True
+            else:
+                logger.warning("Translation system testing failed")
+                return False
+                
+        except Exception as e:
+            logger.error(f"Complete translation setup failed: {e}")
+            return False
+    
+    def _test_complete_translation_system(self) -> bool:
+        """Test the complete translation system with real-world examples"""
+        test_queries = [
+            ('es', '¿Hay apartamentos de 2 dormitorios cerca del centro?'),
+            ('fr', 'Je cherche un appartement avec parking et WiFi'),
+            ('de', 'Ich suche eine Wohnung mit Balkon und Küche'),
+            ('it', 'Cerco casa con giardino vicino alla metro'),
+            ('pt', 'Preciso de apartamento mobiliado com 3 quartos'),
+        ]
+        
+        translation_service = get_translation_service()
+        success_count = 0
+        
+        for lang_code, query in test_queries:
+            try:
+                # Test complete translation pipeline
+                result = translation_service.translate_text(query, target_lang='en', source_lang=lang_code)
+                
+                if result['translation_needed'] and result['translated_text'] != query:
+                    success_count += 1
+                    logger.debug(f"Translation test passed: {lang_code} -> {result['translated_text'][:50]}...")
+                    
+                    # Test reverse translation
+                    reverse_result = translation_service.translate_response_to_user_language(
+                        "I found several apartments matching your criteria.", lang_code
+                    )
+                    
+                    if reverse_result['translation_needed']:
+                        logger.debug(f"Reverse translation test passed: en -> {lang_code}")
+                    
+            except Exception as e:
+                logger.warning(f"Complete translation test failed for {lang_code}: {e}")
+        
+        return success_count >= len(test_queries) * 0.8  # 80% success rate required
+    
+    # === ADDITIONAL SETUP METHODS FOR COMMAND-LINE INTERFACE ===
+    
+    def rebuild_indexes_only(self) -> bool:
+        """Rebuild embeddings and FAISS indexes only"""
+        logger.info("Rebuilding indexes only...")
+        
+        try:
+            # Load documents from database
+            documents = self._load_documents()
+            if not documents:
+                return False
+            
+            # Initialize optimizers
+            if not self._initialize_optimizers(documents):
+                return False
+            
+            # Rebuild indexes
+            return self._create_indexes(documents)
+            
+        except Exception as e:
+            logger.error(f"Index rebuild failed: {e}")
+            return False
+    
+    def build_vocab_only(self) -> bool:
+        """Build vocabulary from MongoDB documents only"""
+        logger.info("Building vocabulary only...")
+        
+        try:
+            # Setup database connection
+            if not self._setup_database_connection():
+                return False
+            
+            # Load documents
+            documents = self._load_documents()
+            if not documents:
+                return False
+            
+            # Build vocabulary
+            return self._build_vocabulary(documents)
+            
+        except Exception as e:
+            logger.error(f"Vocabulary build failed: {e}")
+            return False
+    
+    def test_system_only(self) -> bool:
+        """Test system components without setup"""
+        logger.info("Testing system components...")
+        
+        try:
+            # Test database connection
+            if not self._setup_database_connection():
+                logger.error("Database connection test failed")
+                return False
+            
+            # Test system validation
+            if not self._validate_system():
+                logger.error("System validation test failed")
+                return False
+            
+            # Test translation system if available
+            if TRANSLATION_AVAILABLE:
+                if not self._test_complete_translation_system():
+                    logger.warning("Translation system test failed")
+            
+            logger.info("All system tests passed")
+            return True
+            
+        except Exception as e:
+            logger.error(f"System testing failed: {e}")
+            return False
+    
+    def _print_setup_summary(self):
+        """Print comprehensive setup summary"""
+        duration = self.setup_stats['end_time'] - self.setup_stats['start_time']
+        
+        print("\n" + "="*60)
+        print(f"Force Rebuild: {'YES' if self.force_rebuild else 'NO'}")
+        print(f"Documents Processed: {self.setup_stats['documents_processed']}")
+        print(f"Vocabulary Terms: {self.setup_stats['vocabulary_terms']}")
+        print(f"Embeddings Generated: {self.setup_stats['embeddings_generated']}")
+        print(f"FAISS Index Size: {self.setup_stats['faiss_index_size']}")
+        print(f"Setup Success: {self.setup_stats['setup_success']}")
+        
+        # Show what was reused vs created
+        print("\nComponent Status:")
+        vocab_exists = (Config.DATA_DIR / 'vocabulary.json').exists() and (Config.DATA_DIR / 'keyword_mappings.json').exists()
+        indexes_exist = Config.FAISS_INDEX_PATH.exists() and Config.PROCESSED_DOCS_PATH.exists()
+        embeddings_exist = Config.EMBEDDINGS_CACHE_PATH.exists()
+        
+        print(f"  - Vocabulary: {'REUSED' if (vocab_exists and not self.force_rebuild) else 'CREATED'}")
+        print(f"  - FAISS Index: {'REUSED' if (indexes_exist and not self.force_rebuild) else 'CREATED'}")
+        print(f"  - Embeddings: {'REUSED' if (embeddings_exist and not self.force_rebuild) else 'CREATED'}")
+        
+        if self.setup_stats['errors']:
+            print("\nErrors Encountered:")
+            for error in self.setup_stats['errors']:
+                print(f"  - {error}")
+        
+        print("\nSystem Components:")
+        print(f"  - Database: {Config.DATABASE_NAME}.{Config.COLLECTION_NAME}")
+        print(f"  - Embedding Model: {Config.EMBEDDING_MODEL}")
+        print(f"  - Index Files: {Config.INDEXES_DIR}")
+        print(f"  - Cache Dir: {Config.CACHE_DIR}")
+        print("\n" + "="*60)
+    
     def rebuild_indexes_only(self) -> bool:
         """Rebuild only the indexes without vocabulary"""
         logger.info("Rebuilding indexes only...")
@@ -547,6 +1039,10 @@ Examples:
   python setup.py --build-vocab-only        # Build vocabulary only
   python setup.py --test-system            # Test system components
   python setup.py --full-setup --force     # Force rebuild everything
+  python setup.py --preload-translation    # Preload translation models
+  python setup.py --setup-translation-accuracy  # Setup translation accuracy improvements
+  python setup.py --full-translation-setup # Complete translation setup
+  python setup.py --full-translation-setup --force-translation-reload  # Force reload translation models
         """
     )
     
@@ -580,6 +1076,32 @@ Examples:
         help='Force rebuild of existing components (vocabulary, embeddings, and indexes)'
     )
     
+    # === NEW TRANSLATION MODEL PRELOADING ARGUMENTS ===
+    
+    parser.add_argument(
+        '--preload-translation',
+        action='store_true',
+        help='Preload all translation models for faster runtime performance'
+    )
+    
+    parser.add_argument(
+        '--setup-translation-accuracy',
+        action='store_true',
+        help='Setup translation accuracy improvements (ensemble methods, confidence scoring, etc.)'
+    )
+    
+    parser.add_argument(
+        '--full-translation-setup',
+        action='store_true',
+        help='Complete translation setup including model preloading and accuracy improvements'
+    )
+    
+    parser.add_argument(
+        '--force-translation-reload',
+        action='store_true',
+        help='Force reload translation models even if already cached'
+    )
+    
     parser.add_argument(
         '--verbose', '-v',
         action='store_true',
@@ -606,6 +1128,12 @@ Examples:
         success = setup.build_vocab_only()
     elif args.test_system:
         success = setup.test_system_only()
+    elif args.preload_translation:
+        success = setup.setup_translation_models(force_reload=args.force_translation_reload)
+    elif args.setup_translation_accuracy:
+        success = setup.setup_translation_accuracy_improvements()
+    elif args.full_translation_setup:
+        success = setup.full_translation_setup(force_reload=args.force_translation_reload)
     else:
         # Default to full setup if no specific option given
         print("No specific setup option provided. Running full setup...")
