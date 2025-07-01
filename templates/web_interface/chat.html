@@ -800,6 +800,14 @@
             //console.log('Query:', messageInput.value);
             console.log('Full Response Data:', JSON.stringify(data, null, 2));
             console.log('Response Text:', data.response);
+            console.log('Translation Info:', data.translation);
+            if (data.translation && data.translation.response_translated) {
+                console.log('✅ Response was translated to user language:', data.translation.original_language);
+            } else if (data.translation && data.translation.original_language !== 'en') {
+                console.log('⚠️ Response NOT translated (fallback to English)');
+            } else {
+                console.log('ℹ️ No translation needed (English query)');
+            }
             console.log('Results:', data.results);
             console.log('Metadata:', data.metadata);
             console.log('Currency Conversions:', data.metadata?.currency_conversions);
@@ -871,7 +879,8 @@
                     results: data.results,
                     num_results: data.num_results,
                     max_similarity_score: data.max_similarity_score,
-                    avg_similarity_score: data.avg_similarity_score
+                    avg_similarity_score: data.avg_similarity_score,
+                    translation: data.translation || null  // Pass translation info to message display
                 });
             } else {
                 // Handle error responses with better messaging
@@ -931,6 +940,25 @@
         messageDiv.className = `message ${sender}`;
         
         let enhancedContent = `<div class="response-text">${content}</div>`;
+        
+        // Add translation indicator if response was translated
+        if (metadata.translation && metadata.translation.response_translated) {
+            enhancedContent += `
+                <div class="translation-indicator" style="
+                    background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
+                    color: white;
+                    padding: 6px 12px;
+                    border-radius: 15px;
+                    font-size: 11px;
+                    font-weight: 600;
+                    display: inline-block;
+                    margin: 8px 0;
+                    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+                ">
+                    🌐 Translated from ${metadata.translation.original_language.toUpperCase()}
+                </div>
+            `;
+        }
         
         if (metadata.num_results || metadata.numResults) {
             const numResults = metadata.num_results || metadata.numResults;

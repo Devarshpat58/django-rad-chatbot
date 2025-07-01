@@ -1502,14 +1502,14 @@ class EnhancedRAGService:
         processed_results = []
         for result in results:
             processed_result = {
-                'id': result.get('id', len(processed_results)),
-                'score': result.get('score', 0.0),
-                'mandatory_fields': self._extract_mandatory_fields_fast(result, result.get('id', result.get('_id', 'unknown'))),
-                'query_relevant_fields': self._extract_query_relevant_fields(result, query_text),
+                'id': result.get('id', len(processed_results)) if isinstance(result, dict) else len(processed_results),
+                'score': result.get('score', 0.0) if isinstance(result, dict) else 0.0,
+                'mandatory_fields': self._extract_mandatory_fields_fast(result if isinstance(result, dict) else {'content': result}, str(result.get('id', result.get('_id', 'unknown')) if isinstance(result, dict) else 'unknown')),
+                'query_relevant_fields': self._extract_query_relevant_fields(result if isinstance(result, dict) else {'content': result}, query_text),
                 'ai_summary': self._generate_enhanced_summary(
-                    result, query_text, min_words=200
+                    result if isinstance(result, dict) else {'content': result}, query_text, min_words=200
                 ),
-                'source_json': self._format_json_for_display(result)
+                'source_json': self._format_json_for_display(result if isinstance(result, dict) else {'content': result})
             }
             processed_results.append(processed_result)
         
