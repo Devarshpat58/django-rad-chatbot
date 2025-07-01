@@ -176,7 +176,7 @@ class DashboardView(TemplateView):
 @csrf_exempt
 def ajax_search(request):
     """
-    AJAX search endpoint for web interface with translation support
+    AJAX search endpoint for web interface with comprehensive translation support
     """
     if request.method != 'POST':
         return JsonResponse({'error': 'Method not allowed'}, status=405)
@@ -198,7 +198,7 @@ def ajax_search(request):
             defaults={'user': request.user if request.user.is_authenticated else None}
         )
         
-        # Translate query to English if needed
+        # First, translate query to English if needed
         translation_result = translate_to_english(query_text)
         english_query = translation_result['english_query']
         original_language = translation_result['detected_language']
@@ -208,12 +208,43 @@ def ajax_search(request):
         if translation_needed:
             logger.info(f"Translated query from {original_language}: '{query_text}' -> '{english_query}'")
         
-        # Process query using translated text
+        # Process query using translated text to get COMPLETE English response
         rag_service = EnhancedRAGService.get_instance()
         result = rag_service.process_query(
             query_text=english_query,  # Use translated query for processing
             session_id=session_key
         )
+        
+        # Get the COMPLETE English response (includes AI summaries, comparisons, etc.)
+        complete_english_response = result['response']
+        
+        # Now translate the COMPLETE response back to user's language if needed
+        final_response = complete_english_response
+        response_translated = False
+        
+        if original_language != 'en' and complete_english_response:
+            # Import the translation service
+            from rag_api.translation_service import get_translation_service
+            translation_service = get_translation_service()
+            
+            # Translate the COMPLETE response (including AI summaries) back to user's language
+            reverse_translation_result = translation_service.translate_response_to_user_language(
+                complete_english_response, 
+                original_language
+            )
+            
+            if (reverse_translation_result.get('translated_response') and 
+                reverse_translation_result['translated_response'] != complete_english_response and
+                reverse_translation_result['translated_response'].strip()):
+                
+                final_response = reverse_translation_result['translated_response']
+                response_translated = True
+                logger.info(f"Translated COMPLETE response to {original_language}: '{complete_english_response[:100]}...' -> '{final_response[:100]}...'")
+            else:
+                logger.warning(f"Reverse translation failed or returned unchanged result for language: {original_language}")
+        
+        # Update result with translated response
+        result['response'] = final_response
 
         # Add this line to log the response
         ConsoleLogger.log_django_web_response(
@@ -249,14 +280,16 @@ def ajax_search(request):
         return JsonResponse({
             'success': True,
             'query_id': str(search_query.id),
-            'response': result['response'],  # Response is always in English
+            'response': result['response'],  # Complete response is now in user's language
             'metadata': cleaned_metadata,
             'timestamp': search_query.created_at.isoformat(),
             'english_query': english_query,  # Include translated query
             'translation': {
                 'original_language': original_language,
                 'translation_needed': translation_needed,
-                'original_query': query_text
+                'original_query': query_text,
+                'response_translated': response_translated,
+                'complete_response_translated': response_translated  # Flag for complete response translation
             }
         })
         
@@ -273,7 +306,7 @@ def ajax_search(request):
 @csrf_exempt
 def ajax_chat(request):
     """
-    AJAX chat endpoint for web interface with translation support
+    AJAX chat endpoint for web interface with comprehensive translation support
     """
     if request.method != 'POST':
         return JsonResponse({'error': 'Method not allowed'}, status=405)
@@ -299,7 +332,7 @@ def ajax_chat(request):
             defaults={'user': request.user if request.user.is_authenticated else None}
         )
         
-        # Translate message to English if needed
+        # First, translate message to English if needed
         translation_result = translate_to_english(message)
         english_message = translation_result['english_query']
         original_language = translation_result['detected_language']
@@ -309,12 +342,43 @@ def ajax_chat(request):
         if translation_needed:
             logger.info(f"Translated chat message from {original_language}: '{message}' -> '{english_message}'")
         
-        # Process query using chat API endpoint logic
+        # Process query using translated message to get COMPLETE English response
         rag_service = EnhancedRAGService.get_instance()
         result = rag_service.process_query(
             query_text=english_message,  # Use translated message
             session_id=effective_session_id
         )
+        
+        # Get the COMPLETE English response (includes AI summaries, comparisons, etc.)
+        complete_english_response = result['response']
+        
+        # Now translate the COMPLETE response back to user's language if needed
+        final_response = complete_english_response
+        response_translated = False
+        
+        if original_language != 'en' and complete_english_response:
+            # Import the translation service
+            from rag_api.translation_service import get_translation_service
+            translation_service = get_translation_service()
+            
+            # Translate the COMPLETE response (including AI summaries) back to user's language
+            reverse_translation_result = translation_service.translate_response_to_user_language(
+                complete_english_response, 
+                original_language
+            )
+            
+            if (reverse_translation_result.get('translated_response') and 
+                reverse_translation_result['translated_response'] != complete_english_response and
+                reverse_translation_result['translated_response'].strip()):
+                
+                final_response = reverse_translation_result['translated_response']
+                response_translated = True
+                logger.info(f"Translated COMPLETE chat response to {original_language}: '{complete_english_response[:100]}...' -> '{final_response[:100]}...'")
+            else:
+                logger.warning(f"Reverse translation failed or returned unchanged result for language: {original_language}")
+        
+        # Update result with translated response
+        result['response'] = final_response
 
         # Add this line to log the chat response
         ConsoleLogger.log_django_web_response(
@@ -350,7 +414,7 @@ def ajax_chat(request):
         return JsonResponse({
             'success': True,
             'query_id': str(search_query.id),
-            'response': result['response'],  # Response is always in English
+            'response': result['response'],  # Complete response is now in user's language
             'metadata': cleaned_metadata,
             'timestamp': search_query.created_at.isoformat(),
             'session_id': effective_session_id,
@@ -364,7 +428,9 @@ def ajax_chat(request):
             'translation': {
                 'original_language': original_language,
                 'translation_needed': translation_needed,
-                'original_message': message
+                'original_message': message,
+                'response_translated': response_translated,
+                'complete_response_translated': response_translated  # Flag for complete response translation
             }
         })
         
