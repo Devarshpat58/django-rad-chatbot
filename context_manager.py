@@ -1301,6 +1301,25 @@ class ContextManager:
                      results: List[Dict[str, Any]], metadata: Dict[str, Any]) -> Dict[str, Any]:
         """Process a query within conversation context"""
         try:
+            # Check if this is a reverse translation result that shouldn't be processed
+            if (isinstance(results, list) and len(results) == 1 and 
+                isinstance(results[0], dict) and 
+                'translated_response' in results[0] and 'original_response' in results[0]):
+                # This is a reverse translation result, return it as-is without context processing
+                logger.debug("Detected reverse translation result, skipping context processing")
+                return {
+                    'results': results,
+                    'metadata': metadata,
+                    'context_info': {
+                        'session_id': session_id,
+                        'intent': 'translation',
+                        'confidence': 1.0,
+                        'operation': 'reverse_translation',
+                        'follow_up_capable': False,
+                        'translation_result': True
+                    }
+                }
+            
             # Get or create conversation context
             context = self._get_conversation_context(session_id)
             

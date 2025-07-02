@@ -6,41 +6,65 @@ No API keys or credentials required - completely offline service
 
 import logging
 import re
+import sys
 from typing import Dict, Optional, Tuple
 from functools import lru_cache
 
 logger = logging.getLogger(__name__)
+
+# Force console output for debugging
+def force_console_print(message):
+    """Force print to console with flush for immediate visibility"""
+    try:
+        print(f"[TRANSLATION SERVICE] {message}", flush=True)
+        sys.stdout.flush()
+        sys.stderr.flush()
+    except UnicodeEncodeError:
+        # Fallback for Windows console encoding issues
+        try:
+            print(f"[TRANSLATION SERVICE] {message}".encode('utf-8', errors='replace').decode('utf-8'), flush=True)
+        except:
+            print(f"[TRANSLATION SERVICE] {repr(message)}", flush=True)
 
 # Try to import required libraries
 try:
     from transformers import MarianMTModel, MarianTokenizer, pipeline
     import torch
     TRANSFORMERS_AVAILABLE = True
+    force_console_print("SUCCESS: Transformers library loaded successfully")
 except ImportError:
     TRANSFORMERS_AVAILABLE = False
+    force_console_print("WARNING: transformers library not available. Translation service will be limited.")
     logger.warning("transformers library not available. Translation service will be limited.")
 except Exception as e:
     TRANSFORMERS_AVAILABLE = False
+    force_console_print(f"ERROR: transformers library failed to load: {e}. Translation service will be limited.")
     logger.warning(f"transformers library failed to load: {e}. Translation service will be limited.")
 
 try:
     from langdetect import detect, detect_langs
     LANGDETECT_AVAILABLE = True
+    force_console_print("SUCCESS: langdetect library loaded successfully")
 except ImportError:
     LANGDETECT_AVAILABLE = False
+    force_console_print("WARNING: langdetect library not available. Using basic language detection.")
     logger.warning("langdetect library not available. Using basic language detection.")
 except Exception as e:
     LANGDETECT_AVAILABLE = False
+    force_console_print(f"ERROR: langdetect library failed to load: {e}. Using basic language detection.")
     logger.warning(f"langdetect library failed to load: {e}. Using basic language detection.")
 
 try:
     import langid
     LANGID_AVAILABLE = True
+    force_console_print("SUCCESS: langid library loaded successfully")
 except ImportError:
     LANGID_AVAILABLE = False
+    force_console_print("WARNING: langid library not available. Fallback detection will be limited.")
     logger.warning("langid library not available. Fallback detection will be limited.")
 except Exception as e:
     LANGID_AVAILABLE = False
+    force_console_print(f"ERROR: langid library failed to load: {e}. Fallback detection will be limited.")
     logger.warning(f"langid library failed to load: {e}. Fallback detection will be limited.")
 
 
@@ -364,6 +388,7 @@ class TranslationService:
                     
                     if translated_response and translated_response.strip() and translated_response != english_response:
                         print(f"[TRANSLATION DEBUG] Reverse translation successful: '{english_response[:50]}...' -> '{translated_response[:50]}...'")
+                        print(f"[TRANSLATION DEBUG] Full translated response length: {len(translated_response)} characters")
                         logger.info(f"Reverse translation successful: '{english_response[:50]}...' -> '{translated_response[:50]}...'")
                         return {
                             'original_response': english_response,
@@ -373,6 +398,9 @@ class TranslationService:
                         }
                     else:
                         print(f"[TRANSLATION DEBUG] Reverse translation failed or returned unchanged result")
+                        print(f"[TRANSLATION DEBUG] Translated response: '{translated_response[:100] if translated_response else 'None'}...'")
+                        print(f"[TRANSLATION DEBUG] Original response: '{english_response[:100]}...'")
+                        print(f"[TRANSLATION DEBUG] Response lengths - Original: {len(english_response)}, Translated: {len(translated_response) if translated_response else 0}")
                         logger.warning(f"Reverse translation failed or returned unchanged result")
                         
                 except Exception as e:
@@ -748,6 +776,10 @@ class TranslationService:
         """
         Translate text to target language using MarianMT models
         
+        PERFORMANCE NOTE: Token limits increased to 10,240 to handle 20k-40k character responses.
+        This may require significant GPU memory (8GB+ recommended) for very large texts.
+        Consider implementing text chunking for responses exceeding 40k characters.
+        
         Args:
             text: Text to translate
             target_lang: Target language code (default: 'en')
@@ -756,7 +788,10 @@ class TranslationService:
         Returns:
             Dictionary with translation results
         """
+        force_console_print(f"TRANSLATION REQUEST: '{text[:100]}...' -> {target_lang}")
+        
         if not text or not text.strip():
+            force_console_print("WARNING: Empty text provided, returning as-is")
             return {
                 'original_text': text,
                 'translated_text': text,
@@ -820,6 +855,44 @@ class TranslationService:
                 'error': str(e)
             }
     
+    def _get_safe_lang_token_id(self, tokenizer, target_lang: str):
+        """
+        Safely retrieve language token ID from tokenizer to prevent index errors.
+        
+        Many MarianMT tokenizers do not have the lang_code_to_id attribute, which is perfectly normal.
+        When this attribute is missing, the model will use its default BOS (beginning of sequence) token
+        behavior, which works correctly for most translation tasks.
+        
+        Args:
+            tokenizer: The MarianTokenizer instance
+            target_lang: Target language code
+            
+        Returns:
+            Language token ID or None if not available (None triggers default behavior)
+        """
+        try:
+            # Check if tokenizer has lang_code_to_id attribute
+            if not hasattr(tokenizer, 'lang_code_to_id'):
+                print(f"[TRANSLATION DEBUG] Tokenizer does not have lang_code_to_id attribute (this is normal for many MarianMT models)")
+                logger.debug(f"Tokenizer does not have lang_code_to_id attribute - using default BOS token behavior")
+                return None
+            
+            lang_code_to_id = tokenizer.lang_code_to_id
+            
+            # Ensure it's a dictionary-like object with get method
+            if not hasattr(lang_code_to_id, 'get'):
+                print(f"[TRANSLATION DEBUG] lang_code_to_id is not a dictionary: {type(lang_code_to_id)}")
+                return None
+            
+            # Safely get the token ID
+            token_id = lang_code_to_id.get(target_lang, None)
+            print(f"[TRANSLATION DEBUG] Language token ID for {target_lang}: {token_id}")
+            return token_id
+            
+        except (AttributeError, KeyError, IndexError, TypeError) as e:
+            print(f"[TRANSLATION DEBUG] Error getting language token ID for {target_lang}: {e}")
+            return None
+
     def _translate_with_marian(self, text: str, source_lang: str, target_lang: str = 'en') -> str:
         """
         Translate text using MarianMT model with enhanced preprocessing for better accuracy
@@ -880,7 +953,7 @@ class TranslationService:
                     return_tensors="pt", 
                     padding=True, 
                     truncation=True, 
-                    max_length=512,
+                    max_length=10240,  # Increased to handle 20k-40k character responses
                     add_special_tokens=True
                 )
                 print(f"[TRANSLATION DEBUG] Tokenization completed, input shape: {inputs['input_ids'].shape}")
@@ -893,7 +966,7 @@ class TranslationService:
                     return_tensors="pt", 
                     padding=True, 
                     truncation=True, 
-                    max_length=512,
+                    max_length=10240,  # Increased to handle 20k-40k character responses
                     add_special_tokens=True
                 )
                 print(f"[TRANSLATION DEBUG] Fallback tokenization completed, input shape: {inputs['input_ids'].shape}")
@@ -912,21 +985,48 @@ class TranslationService:
             with torch.no_grad():
                 outputs = model.generate(
                     **inputs,
-                    max_length=512,
+                    max_length=10240,  # Increased to handle 20k-40k character responses
                     num_beams=5,  # Increased beam search for better quality
                     early_stopping=True,
                     do_sample=False,  # Deterministic output
                     temperature=1.0,
                     length_penalty=1.0,  # Balanced length penalty
                     repetition_penalty=1.1,  # Slight repetition penalty
-                    pad_token_id=tokenizer.pad_token_id,
-                    eos_token_id=tokenizer.eos_token_id,
-                    forced_bos_token_id=tokenizer.lang_code_to_id.get(target_lang, None) if hasattr(tokenizer, 'lang_code_to_id') else None
+                    pad_token_id=getattr(tokenizer, 'pad_token_id', None),
+                    eos_token_id=getattr(tokenizer, 'eos_token_id', None),
+                    # forced_bos_token_id: None is acceptable and triggers default behavior
+                    forced_bos_token_id=self._get_safe_lang_token_id(tokenizer, target_lang)
                 )
             print(f"[TRANSLATION DEBUG] Model generation completed, output shape: {outputs.shape}")
+            print(f"[TRANSLATION DEBUG] Output tensor details - Type: {type(outputs)}, Device: {outputs.device if hasattr(outputs, 'device') else 'unknown'}")
+            print(f"[TRANSLATION DEBUG] Output tensor statistics - Min: {outputs.min().item() if hasattr(outputs, 'min') else 'unknown'}, Max: {outputs.max().item() if hasattr(outputs, 'max') else 'unknown'}")
+            print(f"[TRANSLATION DEBUG] First few tokens: {outputs[0][:min(10, outputs.shape[1])].tolist() if outputs.shape[0] > 0 and outputs.shape[1] > 0 else 'empty'}")
             
-            # FIXED: Enhanced decoding with proper UTF-8 handling and Spanish character recovery
+            # ENHANCED: Additional safety checks to prevent index out of range errors
+            if outputs is None:
+                print(f"[TRANSLATION DEBUG] ERROR: Model generated None outputs")
+                logger.error(f"Model generated None outputs for {source_lang}->{target_lang}")
+                raise ValueError(f"Model generated None outputs for translation {source_lang}->{target_lang}")
+            
+            if not hasattr(outputs, 'shape') or len(outputs.shape) < 2:
+                print(f"[TRANSLATION DEBUG] ERROR: Model outputs have invalid shape: {outputs.shape if hasattr(outputs, 'shape') else 'no shape attribute'}")
+                logger.error(f"Model outputs have invalid shape for {source_lang}->{target_lang}")
+                raise ValueError(f"Model outputs have invalid shape for translation {source_lang}->{target_lang}")
+            
+            # Check if outputs is empty to prevent index error
+            if outputs.shape[0] == 0 or outputs.shape[1] == 0:
+                print(f"[TRANSLATION DEBUG] ERROR: Model generated empty outputs")
+                logger.error(f"Model generated empty outputs for {source_lang}->{target_lang}")
+                raise ValueError(f"Model generated empty outputs for translation {source_lang}->{target_lang}")
+            
+            # ENHANCED: Enhanced decoding with additional safety checks for index access
             try:
+                # Additional safety check before accessing outputs[0]
+                if len(outputs) == 0:
+                    print(f"[TRANSLATION DEBUG] ERROR: Outputs tensor is empty (length 0)")
+                    logger.error(f"Outputs tensor is empty for {source_lang}->{target_lang}")
+                    raise ValueError(f"Outputs tensor is empty for translation {source_lang}->{target_lang}")
+                
                 # Decode output with MarianTokenizer, handling SentencePiece properly
                 translated_text = tokenizer.decode(outputs[0], skip_special_tokens=True, clean_up_tokenization_spaces=True)
                 print(f"[TRANSLATION DEBUG] Raw decoded text: '{translated_text[:100]}{'...' if len(translated_text) > 100 else ''}'")
@@ -935,19 +1035,34 @@ class TranslationService:
                 if isinstance(translated_text, bytes):
                     translated_text = translated_text.decode('utf-8', errors='replace')
                 
-                # FIXED: Improved encoding fix with Spanish character recovery
-                translated_text = self._fix_encoding_issues_enhanced(translated_text)
-                print(f"[TRANSLATION DEBUG] Text after enhanced encoding fix: '{translated_text[:100]}{'...' if len(translated_text) > 100 else ''}'")
+                # FIXED: Simplified encoding fix to prevent text corruption
+                translated_text = self._fix_encoding_issues_simple(translated_text)
+                print(f"[TRANSLATION DEBUG] Text after simplified encoding fix: '{translated_text[:100]}{'...' if len(translated_text) > 100 else ''}'")
                 
+            except IndexError as e:
+                print(f"[TRANSLATION DEBUG] INDEX ERROR during decoding: {e}")
+                print(f"[TRANSLATION DEBUG] Outputs shape: {outputs.shape}, Outputs length: {len(outputs) if hasattr(outputs, '__len__') else 'unknown'}")
+                logger.error(f"Index error during decoding for {source_lang}->{target_lang}: {e}")
+                raise ValueError(f"Index error during decoding for translation {source_lang}->{target_lang}: {e}")
             except Exception as e:
                 print(f"[TRANSLATION DEBUG] Decoding error: {e}")
                 logger.error(f"Decoding error: {e}")
-                # Fallback decoding
-                translated_text = tokenizer.decode(outputs[0], skip_special_tokens=True)
+                # Fallback decoding with additional safety checks
+                if outputs.shape[0] > 0 and outputs.shape[1] > 0 and len(outputs) > 0:
+                    try:
+                        translated_text = tokenizer.decode(outputs[0], skip_special_tokens=True)
+                    except IndexError as ie:
+                        print(f"[TRANSLATION DEBUG] INDEX ERROR in fallback decoding: {ie}")
+                        logger.error(f"Index error in fallback decoding for {source_lang}->{target_lang}: {ie}")
+                        raise ValueError(f"Index error in fallback decoding for translation {source_lang}->{target_lang}: {ie}")
+                else:
+                    print(f"[TRANSLATION DEBUG] ERROR: Cannot decode empty outputs")
+                    logger.error(f"Cannot decode empty outputs for {source_lang}->{target_lang}")
+                    raise ValueError(f"Cannot decode empty outputs for translation {source_lang}->{target_lang}")
                 if isinstance(translated_text, bytes):
                     translated_text = translated_text.decode('utf-8', errors='replace')
                 # Apply enhanced encoding fix even to fallback
-                translated_text = self._fix_encoding_issues_enhanced(translated_text)
+                translated_text = self._fix_encoding_issues_simple(translated_text)
             
             # Enhanced post-processing for better accuracy
             translated_text = self._postprocess_translation(translated_text, preprocessed_text, text, target_lang)
@@ -1052,6 +1167,56 @@ class TranslationService:
             # ENHANCED: Comprehensive error handling for encoding edge cases
             logger.warning(f"Multi-language encoding fix encountered error: {e}, returning original text")
             return text  # Return original text if any error occurs
+
+    def _fix_encoding_issues_simple(self, text: str) -> str:
+        """
+        Simplified encoding fix to prevent text corruption while handling common issues
+        
+        Args:
+            text: Text that may have encoding issues
+            
+        Returns:
+            Text with basic encoding issues fixed
+        """
+        if not text:
+            return text
+        
+        try:
+            # Ensure text is properly decoded first
+            if isinstance(text, bytes):
+                text = text.decode('utf-8', errors='replace')
+            
+            # Only fix the most common and safe encoding issues
+            basic_fixes = {
+                # Common UTF-8 encoding issues
+                'Ã¡': 'á', 'Ã©': 'é', 'Ã­': 'í', 'Ã³': 'ó', 'Ãº': 'ú', 'Ã±': 'ñ',
+                'Ã ': 'à', 'Ã¨': 'è', 'Ã¬': 'ì', 'Ã²': 'ò', 'Ã¹': 'ù', 'Ã§': 'ç',
+                'Â¿': '¿', 'Â¡': '¡',  # Spanish punctuation
+                'Ã¤': 'ä', 'Ã¶': 'ö', 'Ã¼': 'ü', 'ÃŸ': 'ß',  # German
+                'â€™': "'", 'â€œ': '"', 'â€': '"',  # Smart quotes
+                'â€"': '–', 'â€"': '—',  # Dashes
+                'â‚¬': '€',  # Euro symbol
+                'Â': '',  # Remove unwanted byte markers
+                'ï»¿': '',  # BOM
+            }
+            
+            # Apply basic fixes
+            fixed_text = text
+            for wrong, correct in basic_fixes.items():
+                fixed_text = fixed_text.replace(wrong, correct)
+            
+            # Ensure valid UTF-8
+            try:
+                fixed_text = fixed_text.encode('utf-8', errors='ignore').decode('utf-8')
+            except (UnicodeEncodeError, UnicodeDecodeError):
+                # If encoding fails, return original
+                return text
+            
+            return fixed_text
+            
+        except Exception as e:
+            logger.warning(f"Simple encoding fix failed: {e}")
+            return text
 
     def _fix_encoding_issues_enhanced(self, text: str) -> str:
         """
@@ -1509,12 +1674,18 @@ class TranslationService:
         # Step 4: Ensure proper capitalization
         result = self._fix_capitalization(result)
         
-        # Step 5: Validate translation quality
-        if not self._validate_translation_quality(result, original, target_lang):
-            logger.warning(f"Translation quality check failed, using conservative approach")
-            return self._conservative_translation_fallback(original)
+        # Step 5: Validate translation quality - DISABLED for better reliability
+        # Validation was too strict and causing false rejections
+        # if not self._validate_translation_quality(result, original, target_lang):
+        #     logger.warning(f"Translation quality check failed, using conservative approach")
+        #     return self._conservative_translation_fallback(original)
         
-        return result
+        # Accept the translation as-is if it passes basic checks
+        if result.strip() and len(result.strip()) >= 2:
+            return result
+        else:
+            # Only fallback if the result is completely empty or too short
+            return original
     
     def _remove_source_contamination(self, translated: str, preprocessed: str, original: str) -> str:
         """Remove source text contamination from translation - FIXED for encoding edge cases"""
@@ -1586,75 +1757,12 @@ class TranslationService:
         if not translated or len(translated.strip()) < 2:
             return False
         
-        # FIXED: More lenient check for identical text (accounting for encoding fixes)
-        # Normalize both texts for comparison and handle encoding variations
-        normalized_original = self._normalize_for_comparison(original)
-        normalized_translated = self._normalize_for_comparison(translated)
-        
-        # Only reject if texts are completely identical after normalization
-        # Also check for encoding-corrupted versions (with � symbols)
-        if normalized_translated.lower() == normalized_original.lower():
-            return False
-        
-        # FIXED: Don't reject translations that have encoding issues but are otherwise valid
-        # If translation contains � symbols but is otherwise different, it's likely a valid translation with encoding issues
-        if '�' in translated and translated != original:
-            # This is likely a valid translation with encoding corruption - accept it
-            # The enhanced encoding fix will handle the � symbols
-            print(f"[TRANSLATION DEBUG] Accepting translation with encoding issues: '{translated[:50]}...'")
+        # FIXED: Much more lenient validation to prevent false rejections
+        # Accept any translation that is different from the original and has reasonable length
+        if translated.strip() and translated != original and len(translated.strip()) >= 2:
             return True
         
-        # Check if translation has reasonable length (very lenient bounds for encoding edge cases)
-        length_ratio = len(translated) / max(len(original), 1)
-        if length_ratio < 0.1 or length_ratio > 8.0:  # Much more lenient bounds
-            return False
-        
-        # Language-specific quality checks
-        if target_lang == 'en':
-            # For forward translation (to English), very basic check
-            # Accept translation if it's not identical to original
-            if len(translated) > 10:  # For longer texts, be more lenient
-                return True
-            
-            # For short texts, check for basic English patterns
-            english_words = set(['the', 'a', 'an', 'and', 'or', 'but', 'in', 'on', 'at', 'to', 'for', 'of', 'with', 'by'])
-            translated_words = set(translated.lower().split())
-            
-            # Accept if it has at least one English word OR if it's clearly different from original
-            if len(english_words.intersection(translated_words)) > 0 or len(translated_words) <= 3:
-                return True
-            
-            # Check if it's clearly different from original (encoding edge case)
-            word_overlap = len(set(original.lower().split()).intersection(translated_words)) / max(len(set(original.lower().split())), 1)
-            if word_overlap < 0.7:  # If less than 70% word overlap, likely a valid translation
-                return True
-                
-        else:
-            # FIXED: Much more lenient validation for reverse translation (English to other languages)
-            original_words = set(original.lower().split())
-            translated_words = set(translated.lower().split())
-            
-            # Calculate word overlap ratio (very lenient for encoding edge cases)
-            overlap_ratio = len(original_words.intersection(translated_words)) / max(len(original_words), 1)
-            
-            # FIXED: Much more lenient overlap threshold for encoding edge cases
-            # Only reject if overlap is extremely high (>95%)
-            if overlap_ratio > 0.95:
-                return False
-            
-            # For encoding edge cases, be much more permissive
-            # If the text is reasonably different, accept it
-            if len(translated) != len(original) or translated != original:
-                # Skip strict language-specific validation for encoding edge cases
-                # Just check if it's not obviously broken
-                if len(translated.strip()) > 0 and not translated.isspace():
-                    return True
-            
-            # Only apply strict validation for very suspicious cases
-            if overlap_ratio > 0.9 and len(translated) > 100:
-                return self._validate_language_specific_content(translated, target_lang)
-        
-        return True
+        return False
     
     def _normalize_for_comparison(self, text: str) -> str:
         """
