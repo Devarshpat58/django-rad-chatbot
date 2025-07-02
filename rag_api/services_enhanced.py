@@ -206,6 +206,11 @@ class EnhancedRAGService:
                 elif 'metadata' in response and 'results' in response['metadata']:
                     raw_results = response['metadata']['results']
                 
+                # Validate and ensure all results are properly formatted
+                if not isinstance(raw_results, list):
+                    logger.warning(f"raw_results is not a list: {type(raw_results)}, converting to list")
+                    raw_results = [raw_results] if raw_results else []
+                
                 # Ensure each result has proper source_data field
                 for result in raw_results:
                     if isinstance(result, dict) and 'source_data' not in result:
@@ -220,7 +225,7 @@ class EnhancedRAGService:
                 )
                 
                 # If context manager provides enhanced response, use it
-                if context_response and 'results' in context_response:
+                if context_response and isinstance(context_response, dict) and 'results' in context_response:
                     return self._format_context_aware_response(
                         query_text, context_response, response, start_time
                     )
@@ -1494,6 +1499,11 @@ class EnhancedRAGService:
         """
         execution_time = time.time() - start_time
         
+        # Ensure context_response is a dictionary
+        if not isinstance(context_response, dict):
+            logger.warning(f"context_response is not a dictionary: {type(context_response)}")
+            context_response = {'results': [], 'metadata': {}}
+        
         # Get results from context response
         results = context_response.get('results', [])
         metadata = context_response.get('metadata', {})
@@ -1504,9 +1514,12 @@ class EnhancedRAGService:
             processed_result = {
                 'id': result.get('id', len(processed_results)) if isinstance(result, dict) else len(processed_results),
                 'score': result.get('score', 0.0) if isinstance(result, dict) else 0.0,
-                'mandatory_fields': self._extract_mandatory_fields_fast(result if isinstance(result, dict) else {'content': result}, str(result.get('id', result.get('_id', 'unknown')) if isinstance(result, dict) else 'unknown')),
+                'mandatory_fields': self._extract_mandatory_fields_fast(
+                    result if isinstance(result, dict) else {'content': result}, 
+                    str(result.get('id', result.get('_id', f'doc_{len(processed_results)}')) if isinstance(result, dict) else f'doc_{len(processed_results)}')
+                ),
                 'query_relevant_fields': self._extract_query_relevant_fields(result if isinstance(result, dict) else {'content': result}, query_text),
-                'ai_summary': self._generate_enhanced_summary(
+                'ai_summary': self._generate_enhanced_ai_summary(
                     result if isinstance(result, dict) else {'content': result}, query_text, min_words=200
                 ),
                 'source_json': self._format_json_for_display(result if isinstance(result, dict) else {'content': result})
@@ -1528,13 +1541,13 @@ class EnhancedRAGService:
         
         # Add comparison data if available
         if 'comparison_table' in context_response:
-            enhanced_metadata['comparison_table'] = context_response['comparison_table']
+            enhanced_metadata['comparison_table'] = context_response.get('comparison_table', {})
             enhanced_metadata['comparison_enabled'] = True
             enhanced_metadata['comparison_summary'] = context_response.get('comparison_summary', {})
         
         # Add context-specific information
         if 'context_info' in context_response:
-            enhanced_metadata['context_info'] = context_response['context_info']
+            enhanced_metadata['context_info'] = context_response.get('context_info', {})
         
         # Calculate similarity scores if available
         if processed_results:
@@ -1559,6 +1572,11 @@ class EnhancedRAGService:
         """
         Generate AI response that's aware of conversation context
         """
+        # Safety check to ensure context_response is a dictionary
+        if not isinstance(context_response, dict):
+            logger.warning(f"context_response is not a dictionary in _generate_context_aware_response: {type(context_response)}")
+            return self._generate_standard_response(query_text, results)
+        
         intent = context_response.get('context_info', {}).get('intent', 'search')
         operation_type = context_response.get('metadata', {}).get('operation_type', 'standard_search')
         
@@ -1576,6 +1594,11 @@ class EnhancedRAGService:
     def _generate_comparison_response(self, query_text: str, results: List[Dict], 
                                     context_response: Dict[str, Any]) -> str:
         """Generate response for comparison operations"""
+        # Safety check to ensure context_response is a dictionary
+        if not isinstance(context_response, dict):
+            logger.warning(f"context_response is not a dictionary in _generate_comparison_response: {type(context_response)}")
+            return self._generate_standard_response(query_text, results)
+        
         comparison_table = context_response.get('comparison_table', {})
         items_compared = comparison_table.get('items_compared', 0)
         similarities = comparison_table.get('similarities', [])

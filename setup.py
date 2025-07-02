@@ -557,7 +557,7 @@ class SystemSetup:
                 'fr': 'Helsinki-NLP/opus-mt-fr-en',  # French
                 'de': 'Helsinki-NLP/opus-mt-de-en',  # German
                 'it': 'Helsinki-NLP/opus-mt-it-en',  # Italian
-                'pt': 'Helsinki-NLP/opus-mt-pt-en',  # Portuguese
+                # 'pt': 'Helsinki-NLP/opus-mt-pt-en',  # Portuguese - Model not available
                 'ru': 'Helsinki-NLP/opus-mt-ru-en',  # Russian
                 'zh': 'Helsinki-NLP/opus-mt-zh-en',  # Chinese
                 'ja': 'Helsinki-NLP/opus-mt-ja-en',  # Japanese
@@ -572,11 +572,11 @@ class SystemSetup:
                 'fr': 'Helsinki-NLP/opus-mt-en-fr',  # English to French
                 'de': 'Helsinki-NLP/opus-mt-en-de',  # English to German
                 'it': 'Helsinki-NLP/opus-mt-en-it',  # English to Italian
-                'pt': 'Helsinki-NLP/opus-mt-en-pt',  # English to Portuguese
+                # 'pt': 'Helsinki-NLP/opus-mt-en-pt',  # English to Portuguese - Model not available
                 'ru': 'Helsinki-NLP/opus-mt-en-ru',  # English to Russian
                 'zh': 'Helsinki-NLP/opus-mt-en-zh',  # English to Chinese
-                'ja': 'Helsinki-NLP/opus-mt-en-ja',  # English to Japanese
-                'ko': 'Helsinki-NLP/opus-mt-en-ko',  # English to Korean
+                # 'ja': 'Helsinki-NLP/opus-mt-en-ja',  # English to Japanese - Model not available
+                # 'ko': 'Helsinki-NLP/opus-mt-en-ko',  # English to Korean - Model not available
                 'ar': 'Helsinki-NLP/opus-mt-en-ar',  # English to Arabic
                 'hi': 'Helsinki-NLP/opus-mt-en-hi',  # English to Hindi
             }
@@ -591,18 +591,18 @@ class SystemSetup:
                 logger.info(f"Loading forward model: {model_name}")
                 if translation_service._load_model(lang_code, reverse=False):
                     loaded_count += 1
-                    logger.info(f"✓ Forward model loaded: {lang_code} -> en")
+                    logger.info(f"[OK] Forward model loaded: {lang_code} -> en")
                 else:
-                    logger.warning(f"✗ Failed to load forward model: {lang_code} -> en")
+                    logger.warning(f"[ERROR] Failed to load forward model: {lang_code} -> en")
             
             # Load reverse translation models
             for lang_code, model_name in reverse_models.items():
                 logger.info(f"Loading reverse model: {model_name}")
                 if translation_service._load_model(lang_code, reverse=True):
                     loaded_count += 1
-                    logger.info(f"✓ Reverse model loaded: en -> {lang_code}")
+                    logger.info(f"[OK] Reverse model loaded: en -> {lang_code}")
                 else:
-                    logger.warning(f"✗ Failed to load reverse model: en -> {lang_code}")
+                    logger.warning(f"[ERROR] Failed to load reverse model: en -> {lang_code}")
             
             # Test models with sample translations
             if self._test_preloaded_models(translation_service):
@@ -618,13 +618,15 @@ class SystemSetup:
     
     def _check_translation_models_loaded(self, translation_service: TranslationService) -> bool:
         """Check if translation models are already loaded"""
-        expected_models = ['es', 'fr', 'de', 'it', 'pt', 'ru', 'zh', 'ja', 'ko', 'ar', 'hi']
+        expected_models = ['es', 'fr', 'de', 'it', 'ru', 'zh', 'ja', 'ko', 'ar', 'hi']  # Removed 'pt'
         
-        # Check forward models
-        forward_loaded = all(lang in translation_service.models for lang in expected_models)
+        # Check forward models (only for models that actually exist)
+        available_forward_models = ['es', 'fr', 'de', 'it', 'ru', 'zh', 'ja', 'ko', 'ar', 'hi']
+        forward_loaded = all(lang in translation_service.models for lang in available_forward_models)
         
-        # Check reverse models
-        reverse_loaded = all(f"{lang}_reverse" in translation_service.models for lang in expected_models)
+        # Check reverse models (only for models that actually exist)
+        available_reverse_models = ['es', 'fr', 'de', 'it', 'ru', 'zh', 'ar', 'hi']  # Removed 'pt', 'ja', 'ko'
+        reverse_loaded = all(f"{lang}_reverse" in translation_service.models for lang in available_reverse_models)
         
         return forward_loaded and reverse_loaded
     
