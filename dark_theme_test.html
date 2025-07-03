@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dark Theme Test</title>
+    <link rel="stylesheet" href="static/css/base.css">
+    <style>
+        body {
+            padding: 2rem;
+            font-family: Arial, sans-serif;
+        }
+        .test-card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 1rem;
+            padding: 2rem;
+            margin: 1rem 0;
+            color: var(--text);
+        }
+        .test-button {
+            background: var(--primary);
+            color: white;
+            padding: 0.5rem 1rem;
+            border: none;
+            border-radius: 0.5rem;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <h1>Dark Theme Test</h1>
+    <div class="test-card">
+        <h2>Test Card</h2>
+        <p>This should display with dark theme colors:</p>
+        <ul>
+            <li>Background: Dark blue-gray (--background: #0f172a)</li>
+            <li>Surface: Lighter blue-gray (--surface: #1e293b)</li>
+            <li>Text: Light gray (--text: #f1f5f9)</li>
+            <li>Border: Medium gray (--border: #334155)</li>
+        </ul>
+        <button class="test-button">Test Button</button>
+    </div>
+    
+    <div class="card">
+        <h3>Using Base CSS Classes</h3>
+        <p class="text-muted">This text should be muted.</p>
+        <button class="btn btn-primary">Primary Button</button>
+        <button class="btn btn-secondary">Secondary Button</button>
+    </div>
+</body>
+</html>
