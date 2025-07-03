@@ -2,15 +2,25 @@
 Translation Service for Django RAG Chatbot
 Uses Hugging Face transformers with MarianMT models for local translation
 No API keys or credentials required - completely offline service
+Enhanced with performance analytics and caching
 """
 
 import logging
 import re
 import sys
+import time
 from typing import Dict, Optional, Tuple
 from functools import lru_cache
 
 logger = logging.getLogger(__name__)
+
+# Import analytics
+try:
+    from .translation_analytics import translation_analytics
+    ANALYTICS_AVAILABLE = True
+except ImportError:
+    ANALYTICS_AVAILABLE = False
+    logger.warning("Translation analytics not available")
 
 # Force console output for debugging
 def force_console_print(message):
@@ -2263,6 +2273,331 @@ def is_translation_available() -> bool:
 
 
 def get_supported_languages() -> Dict[str, str]:
+    """Get supported languages"""
+    return {
+        'en': 'english',
+        'es': 'spanish',
+        'fr': 'french',
+        'de': 'german',
+        'it': 'italian',
+        'pt': 'portuguese',
+        'ru': 'russian',
+        'zh': 'chinese',
+        'ja': 'japanese',
+        'ko': 'korean',
+        'ar': 'arabic',
+        'hi': 'hindi'
+    }
+
+
+# ===== GUARANTEED OUTPUT METHODS FOR UI SAFETY =====
+
+def translate_to_english_guaranteed(text: str, chatbot_response: str = None) -> Dict[str, any]:
+    """
+    GUARANTEED translation function that ALWAYS returns displayable content for the UI.
+    This function ensures the UI never receives empty responses or fails silently.
+    
+    Args:
+        text: Input string to translate to English
+        chatbot_response: Optional English response to translate back to user's language
+        
+    Returns:
+        Dictionary with GUARANTEED content:
+        - english_query: Always contains displayable text (original if translation fails)
+        - detected_language: Always contains a valid language code
+        - translation_needed: Boolean flag
+        - translated_response: Always contains displayable response (English if translation fails)
+        - ui_safe: Always True to indicate UI-safe content
+        - fallback_used: Indicates if fallback was necessary
+        - performance_metrics: Response time and method used
+    """
+    start_time = time.time()
+    print(f"[GUARANTEED TRANSLATION] Starting guaranteed translation process")
+    print(f"[GUARANTEED TRANSLATION] Input: '{text[:100]}{'...' if len(text) > 100 else ''}'")
+    
+    # STEP 1: Ensure we have displayable input text
+    if not text or not text.strip():
+        print(f"[GUARANTEED TRANSLATION] Empty input - returning safe defaults")
+        response_time = time.time() - start_time
+        
+        # Record analytics
+        if ANALYTICS_AVAILABLE:
+            translation_analytics.record_translation_request(
+                language_detected='unknown',
+                target_language='en',
+                success=True,
+                fallback_used=True,
+                fallback_reason='empty_input',
+                response_time=response_time
+            )
+        
+        return {
+            'english_query': 'Hello',  # Safe default
+            'detected_language': 'en',
+            'translation_needed': False,
+            'translated_response': chatbot_response if chatbot_response else 'I\'m ready to help you.',
+            'ui_safe': True,
+            'fallback_used': True,
+            'fallback_reason': 'empty_input',
+            'performance_metrics': {
+                'response_time': response_time,
+                'method_used': 'safe_default'
+            }
+        }
+    
+    # STEP 2: Attempt normal translation with comprehensive error handling
+    try:
+        result = translate_to_english(text, chatbot_response)
+        
+        # Validate that we got usable results
+        if (result and 
+            result.get('english_query') and 
+            result['english_query'].strip() and
+            len(result['english_query'].strip()) >= 1):
+            
+            # Ensure response is also safe
+            if chatbot_response:
+                if not result.get('translated_response') or not result['translated_response'].strip():
+                    print(f"[GUARANTEED TRANSLATION] Response translation failed, using English fallback")
+                    result['translated_response'] = chatbot_response
+                    result['fallback_used'] = True
+                    result['fallback_reason'] = 'response_translation_failed'
+                else:
+                    result['fallback_used'] = False
+            else:
+                result['translated_response'] = ''
+                result['fallback_used'] = False
+            
+            result['ui_safe'] = True
+            result['performance_metrics'] = {
+                'response_time': time.time() - start_time,
+                'method_used': 'normal_translation'
+            }
+            
+            # Record analytics for successful translation
+            if ANALYTICS_AVAILABLE:
+                translation_analytics.record_translation_request(
+                    language_detected=result.get('detected_language', 'unknown'),
+                    target_language='en',
+                    success=True,
+                    fallback_used=result.get('fallback_used', False),
+                    fallback_reason=result.get('fallback_reason'),
+                    response_time=result['performance_metrics']['response_time']
+                )
+            
+            print(f"[GUARANTEED TRANSLATION] Normal translation successful")
+            return result
+        else:
+            print(f"[GUARANTEED TRANSLATION] Normal translation returned unusable result")
+            raise ValueError("Translation returned empty or invalid result")
+            
+    except Exception as e:
+        print(f"[GUARANTEED TRANSLATION] Normal translation failed: {e}")
+        logger.warning(f"Normal translation failed, using guaranteed fallback: {e}")
+    
+    # STEP 3: Guaranteed fallback - always returns displayable content
+    print(f"[GUARANTEED TRANSLATION] Using guaranteed fallback mechanisms")
+    
+    # Attempt basic language detection
+    detected_lang = 'en'  # Safe default
+    try:
+        service = get_translation_service()
+        detected_lang, _ = service.detect_language(text)
+        if not detected_lang or detected_lang not in ['en', 'es', 'fr', 'de', 'it', 'pt', 'ru', 'zh', 'ja', 'ko', 'ar', 'hi']:
+            detected_lang = 'en'  # Fallback to English if detection fails
+    except Exception as e:
+        print(f"[GUARANTEED TRANSLATION] Language detection failed: {e}")
+        detected_lang = 'en'
+    
+    # Clean and prepare the input text for display
+    safe_english_query = text.strip()
+    translation_needed = detected_lang != 'en'
+    
+    # Try basic pattern-based translation as last resort
+    if translation_needed:
+        try:
+            service = get_translation_service()
+            fallback_result = service._fallback_translate(text, detected_lang, 'en')
+            if fallback_result and fallback_result.strip() and fallback_result != text:
+                safe_english_query = fallback_result.strip()
+                print(f"[GUARANTEED TRANSLATION] Pattern-based translation successful")
+            else:
+                print(f"[GUARANTEED TRANSLATION] Pattern-based translation failed, using original text")
+        except Exception as e:
+            print(f"[GUARANTEED TRANSLATION] Pattern-based translation failed: {e}")
+    
+    # Ensure response is safe
+    safe_response = chatbot_response if chatbot_response else ''
+    if chatbot_response and translation_needed:
+        # For response translation, if we can't translate, use English
+        # This ensures the user gets the complete information even if not in their language
+        safe_response = chatbot_response
+        print(f"[GUARANTEED TRANSLATION] Using English response as fallback")
+    
+    # Return guaranteed safe result
+    response_time = time.time() - start_time
+    
+    # Record analytics for fallback
+    if ANALYTICS_AVAILABLE:
+        translation_analytics.record_translation_request(
+            language_detected=detected_lang,
+            target_language='en',
+            success=True,  # We always succeed with fallback
+            fallback_used=True,
+            fallback_reason='comprehensive_fallback',
+            response_time=response_time
+        )
+    
+    result = {
+        'english_query': safe_english_query,
+        'detected_language': detected_lang,
+        'translation_needed': translation_needed,
+        'translated_response': safe_response,
+        'ui_safe': True,
+        'fallback_used': True,
+        'fallback_reason': 'comprehensive_fallback',
+        'performance_metrics': {
+            'response_time': response_time,
+            'method_used': 'guaranteed_fallback'
+        }
+    }
+    
+    print(f"[GUARANTEED TRANSLATION] Guaranteed fallback complete - UI will receive displayable content")
+    return result
+
+
+def translate_response_guaranteed(english_response: str, user_language: str) -> Dict[str, any]:
+    """
+    GUARANTEED response translation that always returns displayable content.
+    
+    Args:
+        english_response: English response from chatbot
+        user_language: User's detected language code
+        
+    Returns:
+        Dictionary with guaranteed displayable response
+    """
+    print(f"[GUARANTEED RESPONSE TRANSLATION] Starting guaranteed response translation")
+    print(f"[GUARANTEED RESPONSE TRANSLATION] Target language: {user_language}")
+    print(f"[GUARANTEED RESPONSE TRANSLATION] Response length: {len(english_response) if english_response else 0}")
+    
+    # STEP 1: Validate inputs
+    if not english_response or not english_response.strip():
+        print(f"[GUARANTEED RESPONSE TRANSLATION] Empty response - returning safe default")
+        return {
+            'translated_response': 'I\'m ready to help you.',
+            'original_response': english_response or '',
+            'translation_needed': False,
+            'ui_safe': True,
+            'fallback_used': True,
+            'fallback_reason': 'empty_response'
+        }
+    
+    # STEP 2: If target language is English, return as-is
+    if user_language == 'en' or not user_language:
+        print(f"[GUARANTEED RESPONSE TRANSLATION] Target is English - no translation needed")
+        return {
+            'translated_response': english_response,
+            'original_response': english_response,
+            'translation_needed': False,
+            'ui_safe': True,
+            'fallback_used': False
+        }
+    
+    # STEP 3: Attempt normal translation
+    try:
+        result = translate_response_to_user_language(english_response, user_language)
+        
+        # Validate translation result
+        if (result and 
+            result.get('translated_response') and 
+            result['translated_response'].strip() and
+            len(result['translated_response'].strip()) >= 2):
+            
+            result['ui_safe'] = True
+            result['fallback_used'] = False
+            print(f"[GUARANTEED RESPONSE TRANSLATION] Normal translation successful")
+            return result
+        else:
+            print(f"[GUARANTEED RESPONSE TRANSLATION] Normal translation returned unusable result")
+            raise ValueError("Response translation returned empty or invalid result")
+            
+    except Exception as e:
+        print(f"[GUARANTEED RESPONSE TRANSLATION] Normal translation failed: {e}")
+        logger.warning(f"Response translation failed, using English fallback: {e}")
+    
+    # STEP 4: Guaranteed fallback - return English response
+    # This ensures user gets the complete information even if not in their language
+    print(f"[GUARANTEED RESPONSE TRANSLATION] Using English fallback to ensure content delivery")
+    return {
+        'translated_response': english_response,  # Use English as guaranteed fallback
+        'original_response': english_response,
+        'translation_needed': True,  # Was needed but failed
+        'ui_safe': True,
+        'fallback_used': True,
+        'fallback_reason': 'translation_failed_using_english'
+    }
+
+
+def ensure_ui_safe_content(content: str, content_type: str = 'response') -> str:
+    """
+    Ensure content is safe for UI display by cleaning and validating it.
+    
+    Args:
+        content: Content to make UI-safe
+        content_type: Type of content ('response', 'query', etc.)
+        
+    Returns:
+        UI-safe content that is guaranteed to be displayable
+    """
+    if not content:
+        if content_type == 'response':
+            return "I'm ready to help you with your real estate questions."
+        elif content_type == 'query':
+            return "Hello"
+        else:
+            return "Content unavailable"
+    
+    # Clean the content
+    try:
+        # Remove any problematic characters that might break UI
+        safe_content = content.strip()
+        
+        # Ensure it's not just whitespace or special characters
+        if not safe_content or not any(c.isalnum() for c in safe_content):
+            if content_type == 'response':
+                return "I'm ready to help you with your real estate questions."
+            elif content_type == 'query':
+                return "Hello"
+            else:
+                return "Content unavailable"
+        
+        # Basic length validation
+        if len(safe_content) < 1:
+            if content_type == 'response':
+                return "I'm ready to help you with your real estate questions."
+            elif content_type == 'query':
+                return "Hello"
+            else:
+                return "Content unavailable"
+        
+        # Apply basic encoding fixes if needed
+        try:
+            service = get_translation_service()
+            safe_content = service._fix_encoding_issues_simple(safe_content)
+        except:
+            pass  # If encoding fix fails, use content as-is
+        
+        return safe_content
+        
+    except Exception as e:
+        logger.warning(f"Content safety check failed: {e}")
+        if content_type == 'response':
+            return "I'm ready to help you with your real estate questions."
+        elif content_type == 'query':
+            return "Hello"
+        else:
+            return "Content unavailable"
     """Get supported languages"""
     return {
         'en': 'english',

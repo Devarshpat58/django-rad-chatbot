@@ -17,7 +17,15 @@ from rag_api.services import RAGService
 from console_logger import ConsoleLogger
 from rag_api.services_enhanced import EnhancedRAGService
 from rag_api.models import SearchSession, SearchQuery
-from rag_api.translation_service import translate_to_english
+from rag_api.translation_service import translate_to_english_guaranteed, translate_response_guaranteed, ensure_ui_safe_content
+from rag_api.json_translation_service import translate_full_response_guaranteed, get_json_translation_service
+
+# Import analytics
+try:
+    from rag_api.translation_analytics import translation_analytics
+    ANALYTICS_AVAILABLE = True
+except ImportError:
+    ANALYTICS_AVAILABLE = False
 
 logger = logging.getLogger(__name__)
 
@@ -198,15 +206,21 @@ def ajax_search(request):
             defaults={'user': request.user if request.user.is_authenticated else None}
         )
         
-        # First, translate query to English if needed
-        translation_result = translate_to_english(query_text)
+        # First, translate query to English if needed using GUARANTEED translation
+        translation_result = translate_to_english_guaranteed(query_text)
         english_query = translation_result['english_query']
         original_language = translation_result['detected_language']
         translation_needed = translation_result['translation_needed']
+        fallback_used = translation_result.get('fallback_used', False)
+        
+        # Ensure english_query is UI-safe
+        english_query = ensure_ui_safe_content(english_query, 'query')
         
         # Log translation if it occurred
         if translation_needed:
             logger.info(f"Translated query from {original_language}: '{query_text}' -> '{english_query}'")
+        if fallback_used:
+            logger.info(f"Translation fallback used: {translation_result.get('fallback_reason', 'unknown')}")
         
         # Process query using translated text to get COMPLETE English response
         rag_service = EnhancedRAGService.get_instance()
@@ -215,36 +229,41 @@ def ajax_search(request):
             session_id=session_key
         )
         
-        # Get the COMPLETE English response (includes AI summaries, comparisons, etc.)
-        complete_english_response = result['response']
+        # Get the COMPLETE English response data (includes AI summaries, source JSON, etc.)
+        complete_response_data = {
+            'response': result['response'],
+            'results': result['metadata'].get('results', []),
+            'metadata': result['metadata']
+        }
         
-        # Now translate the COMPLETE response back to user's language if needed
-        final_response = complete_english_response
+        # Ensure the English response data is UI-safe
+        complete_response_data['response'] = ensure_ui_safe_content(complete_response_data['response'], 'response')
+        
+        # Now translate the COMPLETE response data (including full JSON) back to user's language if needed
+        final_response_data = complete_response_data
         response_translated = False
         
-        if original_language != 'en' and complete_english_response:
-            # Import the translation service
-            from rag_api.translation_service import get_translation_service
-            translation_service = get_translation_service()
-            
-            # Translate the COMPLETE response (including AI summaries) back to user's language
-            reverse_translation_result = translation_service.translate_response_to_user_language(
-                complete_english_response, 
+        if original_language != 'en':
+            # Use new JSON translation service to translate full response data
+            final_response_data = translate_full_response_guaranteed(
+                complete_response_data, 
                 original_language
             )
             
-            if (reverse_translation_result.get('translated_response') and 
-                reverse_translation_result['translated_response'] != complete_english_response and
-                reverse_translation_result['translated_response'].strip()):
-                
-                final_response = reverse_translation_result['translated_response']
-                response_translated = True
-                logger.info(f"Translated COMPLETE response to {original_language}: '{complete_english_response[:100]}...' -> '{final_response[:100]}...'")
+            response_translated = final_response_data.get('translation_info', {}).get('full_json_translated', False)
+            
+            if response_translated:
+                logger.info(f"Translated COMPLETE response data to {original_language} including full JSON documents")
             else:
-                logger.warning(f"Reverse translation failed or returned unchanged result for language: {original_language}")
+                logger.info(f"Response translation attempted but failed (fallback to English). Original language: {original_language}")
         
-        # Update result with translated response
-        result['response'] = final_response
+        # Final UI safety check
+        final_response_data['response'] = ensure_ui_safe_content(final_response_data['response'], 'response')
+        
+        # Update result with translated response data
+        result['response'] = final_response_data['response']
+        result['metadata']['results'] = final_response_data.get('results', [])
+        result['metadata']['translation_info'] = final_response_data.get('translation_info', {})
 
         # Add this line to log the response
         ConsoleLogger.log_django_web_response(
@@ -289,7 +308,10 @@ def ajax_search(request):
                 'translation_needed': translation_needed,
                 'original_query': query_text,
                 'response_translated': response_translated,
-                'complete_response_translated': response_translated  # Flag for complete response translation
+                'complete_response_translated': response_translated,  # Flag for complete response translation
+                'full_json_translated': final_response_data.get('translation_info', {}).get('full_json_translated', False),
+                'query_fallback_used': fallback_used,
+                'ui_safe': True  # Guaranteed UI-safe content
             }
         })
         
@@ -297,10 +319,40 @@ def ajax_search(request):
         return JsonResponse({'error': 'Invalid JSON in request body'}, status=400)
     except Exception as e:
         logger.error(f"AJAX search error: {str(e)}")
-        return JsonResponse({
-            'error': f'Search failed: {str(e)}',
-            'success': False
-        }, status=500)
+        
+        # GUARANTEED ERROR HANDLING - Always return displayable content
+        try:
+            # Attempt to provide a safe fallback response
+            safe_query = ensure_ui_safe_content(query_text if 'query_text' in locals() else 'search query', 'query')
+            safe_response = ensure_ui_safe_content("I'm experiencing technical difficulties but I'm ready to help you with your real estate questions. Please try your search again.", 'response')
+            
+            return JsonResponse({
+                'success': False,
+                'error': f'Search temporarily unavailable: {str(e)}',
+                'response': safe_response,  # Always provide a response
+                'metadata': {
+                    'execution_time': 0,
+                    'num_results': 0,
+                    'error_handled': True
+                },
+                'english_query': safe_query,
+                'translation': {
+                    'original_language': 'en',
+                    'translation_needed': False,
+                    'original_query': safe_query,
+                    'response_translated': False,
+                    'ui_safe': True,
+                    'error_fallback': True
+                }
+            }, status=200)  # Return 200 to ensure UI can display the response
+        except Exception as fallback_error:
+            logger.error(f"Even fallback failed: {fallback_error}")
+            return JsonResponse({
+                'success': False,
+                'error': 'Service temporarily unavailable',
+                'response': "I'm ready to help you with your real estate questions.",
+                'ui_safe': True
+            }, status=200)
 
 
 @csrf_exempt
@@ -332,15 +384,21 @@ def ajax_chat(request):
             defaults={'user': request.user if request.user.is_authenticated else None}
         )
         
-        # First, translate message to English if needed
-        translation_result = translate_to_english(message)
+        # First, translate message to English if needed using GUARANTEED translation
+        translation_result = translate_to_english_guaranteed(message)
         english_message = translation_result['english_query']
         original_language = translation_result['detected_language']
         translation_needed = translation_result['translation_needed']
+        fallback_used = translation_result.get('fallback_used', False)
+        
+        # Ensure english_message is UI-safe
+        english_message = ensure_ui_safe_content(english_message, 'query')
         
         # Log translation if it occurred
         if translation_needed:
             logger.info(f"Translated chat message from {original_language}: '{message}' -> '{english_message}'")
+        if fallback_used:
+            logger.info(f"Chat translation fallback used: {translation_result.get('fallback_reason', 'unknown')}")
         
         # Process query using translated message to get COMPLETE English response
         rag_service = EnhancedRAGService.get_instance()
@@ -349,36 +407,41 @@ def ajax_chat(request):
             session_id=effective_session_id
         )
         
-        # Get the COMPLETE English response (includes AI summaries, comparisons, etc.)
-        complete_english_response = result['response']
+        # Get the COMPLETE English response data (includes AI summaries, source JSON, etc.)
+        complete_response_data = {
+            'response': result['response'],
+            'results': result['metadata'].get('results', []),
+            'metadata': result['metadata']
+        }
         
-        # Now translate the COMPLETE response back to user's language if needed
-        final_response = complete_english_response
+        # Ensure the English response data is UI-safe
+        complete_response_data['response'] = ensure_ui_safe_content(complete_response_data['response'], 'response')
+        
+        # Now translate the COMPLETE response data (including full JSON) back to user's language if needed
+        final_response_data = complete_response_data
         response_translated = False
         
-        if original_language != 'en' and complete_english_response:
-            # Import the translation service
-            from rag_api.translation_service import get_translation_service
-            translation_service = get_translation_service()
-            
-            # Translate the COMPLETE response (including AI summaries) back to user's language
-            reverse_translation_result = translation_service.translate_response_to_user_language(
-                complete_english_response, 
+        if original_language != 'en':
+            # Use new JSON translation service to translate full response data
+            final_response_data = translate_full_response_guaranteed(
+                complete_response_data, 
                 original_language
             )
             
-            if (reverse_translation_result.get('translated_response') and 
-                reverse_translation_result['translated_response'] != complete_english_response and
-                reverse_translation_result['translated_response'].strip()):
-                
-                final_response = reverse_translation_result['translated_response']
-                response_translated = True
-                logger.info(f"Translated COMPLETE chat response to {original_language}: '{complete_english_response[:100]}...' -> '{final_response[:100]}...'")
+            response_translated = final_response_data.get('translation_info', {}).get('full_json_translated', False)
+            
+            if response_translated:
+                logger.info(f"Translated COMPLETE chat response data to {original_language} including full JSON documents")
             else:
-                logger.warning(f"Reverse translation failed or returned unchanged result for language: {original_language}")
+                logger.info(f"Chat response translation attempted but failed (fallback to English). Original language: {original_language}")
         
-        # Update result with translated response
-        result['response'] = final_response
+        # Final UI safety check
+        final_response_data['response'] = ensure_ui_safe_content(final_response_data['response'], 'response')
+        
+        # Update result with translated response data
+        result['response'] = final_response_data['response']
+        result['metadata']['results'] = final_response_data.get('results', [])
+        result['metadata']['translation_info'] = final_response_data.get('translation_info', {})
 
         # Add this line to log the chat response
         ConsoleLogger.log_django_web_response(
@@ -430,7 +493,10 @@ def ajax_chat(request):
                 'translation_needed': translation_needed,
                 'original_message': message,
                 'response_translated': response_translated,
-                'complete_response_translated': response_translated  # Flag for complete response translation
+                'complete_response_translated': response_translated,  # Flag for complete response translation
+                'full_json_translated': final_response_data.get('translation_info', {}).get('full_json_translated', False),
+                'query_fallback_used': fallback_used,
+                'ui_safe': True  # Guaranteed UI-safe content
             }
         })
         
@@ -438,10 +504,44 @@ def ajax_chat(request):
         return JsonResponse({'error': 'Invalid JSON in request body'}, status=400)
     except Exception as e:
         logger.error(f"AJAX chat error: {str(e)}")
-        return JsonResponse({
-            'error': 'The AI system is still starting up. Please wait a moment and try again.' if 'not initialized' in str(e) else f'Sorry, there was an error processing your request: {str(e)}',
-            'success': False
-        }, status=500)
+        
+        # GUARANTEED ERROR HANDLING - Always return displayable content
+        try:
+            # Attempt to provide a safe fallback response
+            safe_message = ensure_ui_safe_content(message if 'message' in locals() else 'chat message', 'query')
+            safe_response = ensure_ui_safe_content("I'm experiencing technical difficulties but I'm ready to help you with your real estate questions. Please try your message again.", 'response')
+            
+            return JsonResponse({
+                'success': False,
+                'error': 'Chat temporarily unavailable. Please wait a moment and try again.' if 'not initialized' in str(e) else f'Sorry, there was an error processing your request: {str(e)}',
+                'response': safe_response,  # Always provide a response
+                'metadata': {
+                    'execution_time': 0,
+                    'num_results': 0,
+                    'error_handled': True
+                },
+                'session_id': effective_session_id if 'effective_session_id' in locals() else 'error_session',
+                'results': [],
+                'max_similarity_score': 0.0,
+                'avg_similarity_score': 0.0,
+                'english_message': safe_message,
+                'translation': {
+                    'original_language': 'en',
+                    'translation_needed': False,
+                    'original_message': safe_message,
+                    'response_translated': False,
+                    'ui_safe': True,
+                    'error_fallback': True
+                }
+            }, status=200)  # Return 200 to ensure UI can display the response
+        except Exception as fallback_error:
+            logger.error(f"Even chat fallback failed: {fallback_error}")
+            return JsonResponse({
+                'success': False,
+                'error': 'Chat service temporarily unavailable',
+                'response': "I'm ready to help you with your real estate questions.",
+                'ui_safe': True
+            }, status=200)
 
 
 def ajax_test(request):
@@ -475,6 +575,90 @@ def ajax_system_status(request):
         
     except Exception as e:
         logger.error(f"AJAX status error: {str(e)}")
+        return JsonResponse({
+            'error': str(e),
+            'status': 'error'
+        }, status=500)
+
+
+@csrf_exempt
+def translation_health_dashboard(request):
+    """
+    Translation health dashboard endpoint providing comprehensive analytics
+    """
+    try:
+        if not ANALYTICS_AVAILABLE:
+            return JsonResponse({
+                'error': 'Translation analytics not available',
+                'status': 'unavailable'
+            }, status=503)
+        
+        # Get query parameters
+        date = request.GET.get('date')  # Optional specific date
+        
+        # Gather comprehensive health data
+        health_data = {
+            'system_health': translation_analytics.get_system_health(),
+            'daily_stats': translation_analytics.get_daily_stats(date),
+            'language_performance': translation_analytics.get_language_performance(),
+            'recent_performance': translation_analytics.get_recent_performance()[-20:],  # Last 20 requests
+            'timestamp': timezone.now().isoformat(),
+            'analytics_status': 'active'
+        }
+        
+        # Add summary metrics
+        health_data['summary'] = {
+            'total_languages_detected': len(health_data['language_performance']),
+            'overall_health_score': health_data['system_health']['health_score'],
+            'status_level': health_data['system_health']['status'],
+            'recommendations_count': len(health_data['system_health']['recommendations'])
+        }
+        
+        logger.info("Translation health dashboard data retrieved successfully")
+        return JsonResponse(health_data)
+        
+    except Exception as e:
+        logger.error(f"Translation health dashboard error: {str(e)}")
+        return JsonResponse({
+            'error': str(e),
+            'status': 'error',
+            'timestamp': timezone.now().isoformat()
+        }, status=500)
+
+
+@csrf_exempt 
+def translation_analytics_reset(request):
+    """
+    Reset translation analytics (admin endpoint)
+    """
+    if request.method != 'POST':
+        return JsonResponse({'error': 'POST method required'}, status=405)
+    
+    try:
+        if not ANALYTICS_AVAILABLE:
+            return JsonResponse({
+                'error': 'Translation analytics not available',
+                'status': 'unavailable'
+            }, status=503)
+        
+        # Clear analytics data
+        translation_analytics.session_stats.clear()
+        translation_analytics.recent_performance.clear()
+        
+        # Clear cache
+        from django.core.cache import cache
+        cache.delete(translation_analytics.CACHE_KEY_DAILY_STATS)
+        cache.delete(translation_analytics.CACHE_KEY_PERFORMANCE_HISTORY)
+        
+        logger.info("Translation analytics reset successfully")
+        return JsonResponse({
+            'status': 'success',
+            'message': 'Translation analytics reset successfully',
+            'timestamp': timezone.now().isoformat()
+        })
+        
+    except Exception as e:
+        logger.error(f"Translation analytics reset error: {str(e)}")
         return JsonResponse({
             'error': str(e),
             'status': 'error'

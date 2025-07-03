@@ -21,4 +21,8 @@ urlpatterns = [
     path('ajax/chat/', views.ajax_chat, name='ajax_chat'),
     path('ajax/test/', views.ajax_test, name='ajax_test'),
     path('ajax/status/', views.ajax_system_status, name='ajax_status'),
+    
+    # Translation analytics endpoints  
+    path('ajax/translation-health/', views.translation_health_dashboard, name='translation_health'),
+    path('ajax/translation-reset/', views.translation_analytics_reset, name='translation_reset'),
 ]

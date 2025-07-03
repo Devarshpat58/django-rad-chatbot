@@ -801,10 +801,14 @@
             console.log('Full Response Data:', JSON.stringify(data, null, 2));
             console.log('Response Text:', data.response);
             console.log('Translation Info:', data.translation);
-            if (data.translation && data.translation.response_translated) {
+            if (data.translation && data.translation.full_json_translated) {
+                console.log('✅ Complete response data including full JSON was translated to user language:', data.translation.original_language);
+            } else if (data.translation && data.translation.response_translated) {
                 console.log('✅ Response was translated to user language:', data.translation.original_language);
+            } else if (data.translation && data.translation.translation_needed && data.translation.original_language !== 'en') {
+                console.log('⚠️ Response translation attempted but failed (fallback to English). Original language:', data.translation.original_language);
             } else if (data.translation && data.translation.original_language !== 'en') {
-                console.log('⚠️ Response NOT translated (fallback to English)');
+                console.log('ℹ️ Query translated but response NOT translated (fallback to English)');
             } else {
                 console.log('ℹ️ No translation needed (English query)');
             }
@@ -941,23 +945,43 @@
         
         let enhancedContent = `<div class="response-text">${content}</div>`;
         
-        // Add translation indicator if response was translated
-        if (metadata.translation && metadata.translation.response_translated) {
-            enhancedContent += `
-                <div class="translation-indicator" style="
-                    background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
-                    color: white;
-                    padding: 6px 12px;
-                    border-radius: 15px;
-                    font-size: 11px;
-                    font-weight: 600;
-                    display: inline-block;
-                    margin: 8px 0;
-                    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-                ">
-                    🌐 Translated from ${metadata.translation.original_language.toUpperCase()}
-                </div>
-            `;
+        // Add translation indicator if response was translated or translation was attempted
+        if (metadata.translation && metadata.translation.original_language !== 'en') {
+            let indicatorText = '';
+            let indicatorStyle = '';
+            
+            if (metadata.translation.full_json_translated) {
+                // Full JSON translation successful
+                indicatorText = `🌐 Complete data translated from ${metadata.translation.original_language.toUpperCase()} (including source documents)`;
+                indicatorStyle = 'background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);';
+            } else if (metadata.translation.response_translated) {
+                // Successful translation
+                indicatorText = `🌐 Translated from ${metadata.translation.original_language.toUpperCase()}`;
+                indicatorStyle = 'background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);';
+            } else if (metadata.translation.translation_needed) {
+                // Translation was attempted but failed (fallback to English)
+                indicatorText = `🌐 Query translated from ${metadata.translation.original_language.toUpperCase()}, response in English`;
+                indicatorStyle = 'background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);';
+            }
+            
+            if (indicatorText) {
+                enhancedContent += `
+                    <div class="translation-indicator" style="
+                        ${indicatorStyle}
+                        color: white;
+                        padding: 8px 16px;
+                        border-radius: 20px;
+                        font-size: 12px;
+                        font-weight: 600;
+                        display: inline-block;
+                        margin: 10px 0;
+                        box-shadow: 0 3px 6px rgba(0,0,0,0.15);
+                        border: 2px solid rgba(255,255,255,0.2);
+                    ">
+                        ${indicatorText}
+                    </div>
+                `;
+            }
         }
         
         if (metadata.num_results || metadata.numResults) {
