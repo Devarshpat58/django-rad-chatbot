@@ -187,7 +187,10 @@ class RAGService:
                                 # AI-generated summary (200+ words)
                                 'ai_summary': ai_summary,
                                 # Legacy document field for backwards compatibility
-                                'document': clean_doc
+                                'document': clean_doc,
+                                # Translation metadata
+                                'translation_ready': True,
+                                'original_language': 'en'  # Source data is in English
                             }
                             search_results.append(result_item)
             except Exception as e:
