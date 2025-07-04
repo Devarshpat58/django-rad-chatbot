@@ -1004,7 +1004,7 @@
             enhancedContent += '<div class="detailed-results">';
             
             metadata.results.forEach((result, index) => {
-                if (index < 3) {
+                if (index < 5) {
                     enhancedContent += `
                         <div class="result-item" data-result-index="${index}">
                             <h6>Property ${index + 1}</h6>
@@ -1126,7 +1126,7 @@
                         📊 Compare Properties in Table View
                     </button>
                     <div class="comparison-table-container" id="comparison-table" style="display: none;">
-                        ${generateComparisonTable(metadata.results.slice(0, 4))}
+                        ${generateComparisonTable(metadata.results.slice(0, 5))}
                     </div>
                 `;
             }
