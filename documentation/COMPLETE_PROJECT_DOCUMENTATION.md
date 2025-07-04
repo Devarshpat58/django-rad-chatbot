@@ -1,8 +1,10 @@
 # Django RAG Chatbot - Complete Project Documentation
 
-**Version**: 2.0  
-**Date**: June 2024  
-**System**: Advanced AI-Powered Multilingual Real Estate Chatbot with MarianMT Translation
+**Version**: 3.0  
+**Date**: December 2024  
+**System**: Advanced AI-Powered Multilingual Real Estate Chatbot with Comprehensive Translation Service
+
+> **📄 For comprehensive translation service documentation, see: [COMPREHENSIVE_TRANSLATION_GUIDE.md](./COMPREHENSIVE_TRANSLATION_GUIDE.md)**
 
 ---
 
