@@ -943,7 +943,7 @@
         const messageDiv = document.createElement('div');
         messageDiv.className = `message ${sender}`;
         
-        let enhancedContent = `<div class="response-text">${content}</div>`;
+        let enhancedContent = ``;
         
         // Add translation indicator if response was translated or translation was attempted
         if (metadata.translation && metadata.translation.original_language !== 'en') {
